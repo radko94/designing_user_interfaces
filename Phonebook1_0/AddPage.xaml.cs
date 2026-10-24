@@ -1,3 +1,4 @@
+
 using Phonebook1_0.Models;
 
 namespace Phonebook1_0;
@@ -17,32 +18,38 @@ public partial class AddPage : ContentPage
         string pictureUrl = boxPicture.Text?.Trim() ?? string.Empty;
 
         // Validate required fields.
+        // Picture URL is optional.
         if (string.IsNullOrWhiteSpace(name) ||
-            string.IsNullOrWhiteSpace(phone) ||
-            string.IsNullOrWhiteSpace(pictureUrl))
+            string.IsNullOrWhiteSpace(phone))
         {
             await DisplayAlertAsync(
                 "Missing information",
-                "Please complete all fields.",
+                "Please enter a name and phone number.",
                 "OK");
 
             return;
         }
 
-        // Validate the image URL.
-        if (!Uri.TryCreate(
-                pictureUrl,
-                UriKind.Absolute,
-                out Uri? uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp &&
-             uri.Scheme != Uri.UriSchemeHttps))
+        // Validate the picture URL only if provided.
+        if (!string.IsNullOrWhiteSpace(pictureUrl))
         {
-            await DisplayAlertAsync(
-                "Invalid picture",
-                "Please enter a valid HTTP or HTTPS URL.",
-                "OK");
+            bool isValidUrl =
+                Uri.TryCreate(
+                    pictureUrl,
+                    UriKind.Absolute,
+                    out Uri? uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp ||
+                 uri.Scheme == Uri.UriSchemeHttps);
 
-            return;
+            if (!isValidUrl)
+            {
+                await DisplayAlertAsync(
+                    "Invalid picture",
+                    "Please enter a valid HTTP or HTTPS URL.",
+                    "OK");
+
+                return;
+            }
         }
 
         // Prevent repeated submissions.
@@ -57,7 +64,7 @@ public partial class AddPage : ContentPage
                 pictureUrl
             );
 
-            // Add contact to shared collection.
+            // Add contact to the shared collection.
             App.Contacts.Add(contact);
 
             // Return to MainPage.

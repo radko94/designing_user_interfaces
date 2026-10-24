@@ -34,18 +34,29 @@
 
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:Contact">
+
                     <Grid
                         Padding="0,8"
                         ColumnDefinitions="80,*"
                         ColumnSpacing="12">
 
                         <!-- Contact picture -->
-                        <Image
+                        <Grid
                             Grid.Column="0"
-                            Source="{Binding PictureUrl}"
                             WidthRequest="76"
-                            HeightRequest="76"
-                            Aspect="AspectFill" />
+                            HeightRequest="76">
+
+                            <!-- Default Unsplash image -->
+                            <Image
+                                Source="https://images.unsplash.com/photo-1740252117012-bb53ad05e370?ixid=M3w4MjcwNjd8MHwxfHNlYXJjaHw4fHxwbGFjZWhvbGRlciUyQyUyMHBlcnNvfHx8fDE3OTI4NjE5NzZ8MA&amp;ixlib=rb-4.1.0&amp;fit=max&amp;q=80"
+                                Aspect="AspectFill" />
+
+                            <!-- User-provided image -->
+                            <Image
+                                Source="{Binding PictureUrl}"
+                                Aspect="AspectFill" />
+
+                        </Grid>
 
                         <!-- Contact information -->
                         <VerticalStackLayout
@@ -65,7 +76,9 @@
                                 TextColor="Black" />
 
                         </VerticalStackLayout>
+
                     </Grid>
+
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
