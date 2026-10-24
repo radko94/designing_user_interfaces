@@ -2,22 +2,17 @@
 
 public partial class MainPage : ContentPage
 {
-	int count = 0;
+    public MainPage()
+    {
+        InitializeComponent();
 
-	public MainPage()
-	{
-		InitializeComponent();
-	}
+        // Bind the shared contact collection.
+        boxContacts.ItemsSource = App.Contacts;
+    }
 
-	private void OnCounterClicked(object? sender, EventArgs e)
-	{
-		count++;
-
-		if (count == 1)
-			CounterBtn.Text = $"Clicked {count} time";
-		else
-			CounterBtn.Text = $"Clicked {count} times";
-
-		SemanticScreenReader.Announce(CounterBtn.Text);
-	}
+    private async void OnAddContactClicked(object sender, EventArgs e)
+    {
+        // Navigate to the Add Contact screen.
+        await Navigation.PushAsync(new AddPage());
+    }
 }
