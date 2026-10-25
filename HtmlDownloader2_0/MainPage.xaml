@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="HtmlDownloader2_0.MainPage"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="LightCoral">
+
+    <Grid
+        Padding="20"
+        RowSpacing="12"
+        RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+        <!-- Application title -->
+        <Label
+            Grid.Row="0"
+            Text="HTML Downloader 2.0"
+            FontSize="30"
+            FontAttributes="Bold"
+            TextColor="Black" />
+
+        <!-- URL input -->
+        <VerticalStackLayout
+            Grid.Row="1"
+            Spacing="6">
+
+            <Label
+                Text="URL"
+                FontSize="20"
+                TextColor="Black" />
+
+            <Entry
+                x:Name="UrlEntry"
+                Text="https://www.minchev.eu"
+                Placeholder="https://www.minchev.eu"
+                Keyboard="Url"
+                FontSize="18"
+                TextColor="Black"
+                BackgroundColor="White" />
+
+        </VerticalStackLayout>
+
+        <!-- Download button -->
+        <Button
+            x:Name="DownloadButton"
+            Grid.Row="2"
+            Text="Download"
+            FontSize="20"
+            Padding="20,12"
+            BackgroundColor="#512BD4"
+            TextColor="White"
+            Clicked="OnDownloadClicked" />
+
+        <!-- Status feedback -->
+        <HorizontalStackLayout
+            Grid.Row="3"
+            Spacing="10">
+
+            <ActivityIndicator
+                x:Name="LoadingIndicator"
+                IsRunning="False"
+                Color="Black"
+                WidthRequest="24"
+                HeightRequest="24" />
+
+            <Label
+                x:Name="StatusLabel"
+                Text="Ready"
+                FontSize="16"
+                TextColor="Black"
+                VerticalOptions="Center" />
+
+        </HorizontalStackLayout>
+
+        <!-- Extracted HTML text -->
+        <Grid
+            Grid.Row="4"
+            RowDefinitions="Auto,*"
+            RowSpacing="8">
+
+            <Label
+                Grid.Row="0"
+                Text="Extracted Text"
+                FontSize="20"
+                TextColor="Black" />
+
+            <Editor
+                x:Name="HtmlEditor"
+                Grid.Row="1"
+                IsReadOnly="True"
+                FontSize="16"
+                TextColor="Black"
+                BackgroundColor="White"
+                Placeholder="Downloaded text will appear here."
+                VerticalOptions="Fill" />
+
+        </Grid>
+
+    </Grid>
+
+</ContentPage>

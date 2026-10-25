@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Phonebook2_0.AddPage"
+    Title="Add Contact"
+    BackgroundColor="Cyan">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="20"
+            Spacing="10">
+
+            <!-- Page title -->
+            <Label
+                Text="Add Contact"
+                FontSize="34"
+                TextColor="Black" />
+
+            <!-- Picture -->
+            <Label
+                Text="Picture"
+                FontSize="20"
+                TextColor="Black" />
+
+            <Entry
+                x:Name="boxPicture"
+                Placeholder="https://example.com/photo.png"
+                Keyboard="Url"
+                FontSize="18"
+                TextColor="Black"
+                BackgroundColor="White" />
+
+            <!-- Name -->
+            <Label
+                Text="Name"
+                FontSize="20"
+                TextColor="Black" />
+
+            <Entry
+                x:Name="boxName"
+                Placeholder="Enter contact name"
+                Keyboard="Text"
+                FontSize="18"
+                TextColor="Black"
+                BackgroundColor="White" />
+
+            <!-- Phone -->
+            <Label
+                Text="Phone"
+                FontSize="20"
+                TextColor="Black" />
+
+            <Entry
+                x:Name="boxPhone"
+                Placeholder="Enter phone number"
+                Keyboard="Telephone"
+                FontSize="18"
+                TextColor="Black"
+                BackgroundColor="White" />
+
+            <!-- Save button -->
+            <Button
+                x:Name="SaveButton"
+                Text="Save"
+                FontSize="20"
+                Padding="20,12"
+                Margin="0,20,0,0"
+                BackgroundColor="#512BD4"
+                TextColor="White"
+                Clicked="OnSaveClicked" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

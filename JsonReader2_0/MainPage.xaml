@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="JsonReader2_0.MainPage"
+             Padding="30">
+
+    <VerticalStackLayout>
+
+        <Label Text="JSON Reader 2.0"
+               FontSize="40"
+               Margin="10" />
+
+        <Editor x:Name="Joke"
+                FontSize="20"
+                IsReadOnly="True"
+                AutoSize="TextChanges"
+                MinimumHeightRequest="300"
+                Margin="10" />
+
+        <HorizontalStackLayout HorizontalOptions="Center">
+            <Button x:Name="NewJokeButton"
+                    Text="New joke"
+                    WidthRequest="120"
+                    FontSize="23"
+                    Padding="10"
+                    Margin="10"
+                    Clicked="OnNewJokeClicked" />
+            <Button x:Name="TellJokeButton"
+                    Text="Tell joke"
+                    WidthRequest="120"
+                    FontSize="23"
+                    Padding="10"
+                    Margin="10"
+                    Clicked="OnTellJokeClicked" />
+        </HorizontalStackLayout>
+
+        <ActivityIndicator x:Name="LoadingIndicator"
+                           IsRunning="False"
+                           HorizontalOptions="Center"
+                           Margin="0,10" />
+    </VerticalStackLayout>
+</ContentPage>

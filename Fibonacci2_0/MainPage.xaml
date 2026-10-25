@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Fibonacci2_0.MainPage">
+
+    <VerticalStackLayout
+        Padding="20"
+        Spacing="12">
+
+        <!-- Application title -->
+        <Label
+            Text="Fibonacci 2.0"
+            FontSize="36" />
+
+        <!-- Numeric limit -->
+        <Label
+            Text="Limit"
+            FontSize="20" />
+
+        <Entry
+            x:Name="boxLimit"
+            Text="1000"
+            Keyboard="Numeric"
+            FontSize="20" />
+
+        <!-- Generate button -->
+        <Button
+            Text="Generate"
+            FontSize="20"
+            Padding="20,10"
+            Clicked="OnButtonClicked" />
+
+        <!-- Fibonacci numbers -->
+        <CollectionView
+            x:Name="boxNumbers"
+            SelectionMode="None"
+            VerticalOptions="FillAndExpand">
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Label
+                        Text="{Binding .}"
+                        FontSize="20"
+                        Padding="5,6" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+        </CollectionView>
+
+    </VerticalStackLayout>
+
+</ContentPage>
