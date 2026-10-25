@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SecureMesh.App/SecureMesh.App.csproj" />
+  <Project Path="SecureMesh.Core.Tests/SecureMesh.Core.Tests.csproj" />
+  <Project Path="SecureMesh.Core/SecureMesh.Core.csproj" />
+</Solution>
