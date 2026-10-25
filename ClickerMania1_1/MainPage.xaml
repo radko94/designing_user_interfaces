@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="ClickerMania1_1.MainPage"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="Orange">
+
+    <Grid Padding="30">
+
+        <VerticalStackLayout
+            Spacing="30"
+            VerticalOptions="Center"
+            HorizontalOptions="Fill">
+
+            <!-- Application title -->
+            <Label
+                Text="Clicker Mania 1.1"
+                FontSize="36"
+                FontAttributes="Bold"
+                HorizontalTextAlignment="Center"
+                TextColor="Black" />
+
+            <!-- Click counter -->
+            <Label
+                x:Name="ClicksLabel"
+                Text="0"
+                FontSize="100"
+                FontAttributes="Bold"
+                HorizontalTextAlignment="Center"
+                TextColor="Black" />
+
+            <!-- Click button -->
+            <Button
+                x:Name="ClickButton"
+                Text="Click"
+                FontSize="36"
+                Padding="40,20"
+                HorizontalOptions="Center"
+                Clicked="OnClickButtonClicked" />
+
+        </VerticalStackLayout>
+
+    </Grid>
+
+</ContentPage>
