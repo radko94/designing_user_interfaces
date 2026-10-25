@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Suma3_0.MainPage"
+    BackgroundColor="Orange">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="12">
+
+            <!-- Title -->
+            <Label Text="Suma 3.0"
+                   FontSize="42"
+                   TextColor="Black" />
+
+            <!-- First number -->
+            <Label Text="A=" FontSize="24" />
+            <Entry x:Name="boxA"
+                   Keyboard="Numeric"
+                   FontSize="24"
+                   Placeholder="Enter A" />
+
+            <!-- Second number -->
+            <Label Text="B=" FontSize="24" />
+            <Entry x:Name="boxB"
+                   Keyboard="Numeric"
+                   FontSize="24"
+                   Placeholder="Enter B" />
+
+            <!-- Result -->
+            <Label Text="A+B=" FontSize="24" />
+            <Entry x:Name="boxAB"
+                   FontSize="24"
+                   IsReadOnly="True" />
+
+            <!-- Calculate -->
+            <Button Text="Sum"
+                    FontSize="24"
+                    Margin="0,20,0,0"
+                    Clicked="OnButtonClicked" />
+
+            <!-- Validation message -->
+            <Label x:Name="errorLabel"
+                   TextColor="DarkRed"
+                   FontSize="16"
+                   IsVisible="False" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
