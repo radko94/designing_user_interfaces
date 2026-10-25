@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RssReader1_0.MainPage"
+             BackgroundColor="Lime"
+             Padding="20">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+        <Label Grid.Row="0"
+               Text="RSS Reader 1.0"
+               FontSize="40"
+               Margin="0,0,0,10" />
+
+        <Entry Grid.Row="1"
+               x:Name="URI"
+               Text="https://www.minchev.eu/feed/"
+               FontSize="20"
+               Keyboard="Url" />
+
+        <Button Grid.Row="2"
+                x:Name="DownloadButton"
+                Text="Download"
+                FontSize="20"
+                Margin="0,10"
+                Padding="20,10"
+                HorizontalOptions="Start"
+                Clicked="OnDownloadClicked" />
+
+        <Grid Grid.Row="3">
+
+            <CollectionView x:Name="RSS">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <VerticalStackLayout Padding="0,6">
+                            <Label Text="{Binding Title}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextDecorations="Underline"
+                                   TextColor="Navy"
+                                   LineBreakMode="WordWrap">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnItemTapped" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                            <Label Text="{Binding PublishedDate}"
+                                   FontSize="13"
+                                   TextColor="DimGray" />
+                        </VerticalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <ActivityIndicator x:Name="LoadingIndicator"
+                               IsRunning="False"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+
+            <Label x:Name="StatusLabel"
+                   IsVisible="False"
+                   FontSize="16"
+                   TextColor="DimGray"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"
+                   HorizontalTextAlignment="Center" />
+        </Grid>
+    </Grid>
+</ContentPage>
