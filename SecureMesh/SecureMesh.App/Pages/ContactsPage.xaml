@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SecureMesh.App.Pages.ContactsPage"
+             Title="Контакти"
+             BackgroundColor="{AppThemeBinding Light=#F4F6FA, Dark=#12141A}">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Настройки" Clicked="OnSettingsClicked" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,*" Padding="16,12">
+
+        <Border Grid.Row="0"
+                BackgroundColor="{AppThemeBinding Light=#E8F0FE, Dark=#1B2230}"
+                Padding="12"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 12">
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="Състояние:" FontSize="13" TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}" />
+                <Label x:Name="ConnectionLabel" Text="Изключено" FontSize="13" FontAttributes="Bold" TextColor="#B45309" />
+            </HorizontalStackLayout>
+        </Border>
+
+        <Grid Grid.Row="1" RowDefinitions="*,Auto">
+
+            <CollectionView x:Name="ContactsView"
+                            SelectionMode="Single"
+                            SelectionChanged="OnContactSelected">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Spacing="8" VerticalOptions="Center">
+                        <Label Text="Няма контакти"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+                        <Label Text="Добавете контакт чрез сканиране на QR код."
+                               FontSize="14"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,4"
+                                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1B1F27}"
+                                StrokeThickness="1"
+                                Stroke="{AppThemeBinding Light=#E2E6EE, Dark=#2A2F3A}"
+                                StrokeShape="RoundRectangle 12"
+                                Padding="14,12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{Binding Name}" FontSize="16" VerticalOptions="Center" TextColor="{AppThemeBinding Light=#1F2430, Dark=#E7EAF0}" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding Badge}"
+                                       TextColor="{Binding BadgeColor}"
+                                       FontSize="12"
+                                       VerticalOptions="Center" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Button Grid.Row="1"
+                    Text="Добави контакт"
+                    Clicked="OnAddContactClicked"
+                    FontSize="16"
+                    BackgroundColor="#1B6EF3"
+                    TextColor="White"
+                    CornerRadius="12"
+                    HeightRequest="52"
+                    Margin="0,8,0,0" />
+        </Grid>
+    </Grid>
+</ContentPage>

@@ -3,12 +3,18 @@
     x:Class="SecureMesh.App.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:SecureMesh.App"
-    Title="SecureMesh.App">
+    xmlns:pages="clr-namespace:SecureMesh.App.Pages"
+    Title="SecureMesh"
+    FlyoutBehavior="Disabled">
 
     <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+        Title="Идентичност"
+        Route="identity"
+        ContentTemplate="{DataTemplate pages:IdentityPage}" />
+
+    <ShellContent
+        Title="Контакти"
+        Route="contacts"
+        ContentTemplate="{DataTemplate pages:ContactsPage}" />
 
 </Shell>

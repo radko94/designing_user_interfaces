@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:zxing="clr-namespace:ZXing.Net.Maui.Controls;assembly=ZXing.Net.MAUI.Controls"
+             x:Class="SecureMesh.App.Pages.IdentityPage"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light=#F4F6FA, Dark=#12141A}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24,48" Spacing="18" MaximumWidthRequest="480">
+
+            <Label Text="SecureMesh"
+                   FontSize="34"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   TextColor="{AppThemeBinding Light=#1B6EF3, Dark=#6EA8FE}" />
+
+            <Label Text="Създайте своята идентичност"
+                   FontSize="18"
+                   HorizontalOptions="Center"
+                   TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}" />
+
+            <Label x:Name="HintLabel"
+                   Text="Въведете име. Приложението ще генерира криптографски ключове за вашата самоличност."
+                   FontSize="14"
+                   HorizontalOptions="Center"
+                   TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+
+            <Border StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light=#D3D9E3, Dark=#2A2F3A}"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1B1F27}"
+                    Padding="12,4"
+                    StrokeShape="RoundRectangle 12">
+                <Entry x:Name="NicknameEntry"
+                       Placeholder="Вашето име"
+                       FontSize="16"
+                       ReturnType="Done"
+                       Completed="OnCreateClicked" />
+            </Border>
+
+            <Button x:Name="CreateBtn"
+                    Text="Създай идентичност"
+                    Clicked="OnCreateClicked"
+                    FontSize="16"
+                    BackgroundColor="#1B6EF3"
+                    TextColor="White"
+                    CornerRadius="12"
+                    HeightRequest="52" />
+
+            <VerticalStackLayout x:Name="QrSection" IsVisible="False" Spacing="14">
+                <Label Text="Вашият QR код"
+                       FontSize="16"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"
+                       TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}" />
+                <Label Text="Покажете го на другия потребител, за да ви добави като контакт."
+                       FontSize="13"
+                       HorizontalOptions="Center"
+                       TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+
+                <Border BackgroundColor="White"
+                        Padding="16"
+                        StrokeThickness="1"
+                        Stroke="#D3D9E3"
+                        StrokeShape="RoundRectangle 16"
+                        HorizontalOptions="Center">
+                    <zxing:BarcodeGeneratorView x:Name="QrView"
+                                                WidthRequest="240"
+                                                HeightRequest="240"
+                                                Format="QrCode"
+                                                ForegroundColor="Black" />
+                </Border>
+
+                <Button x:Name="ContinueBtn"
+                        Text="Към контактите"
+                        Clicked="OnContinueClicked"
+                        FontSize="16"
+                        BackgroundColor="#17A34A"
+                        TextColor="White"
+                        CornerRadius="12"
+                        HeightRequest="52" />
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

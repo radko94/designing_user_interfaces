@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SecureMesh.App.Pages.ChatPage"
+             BackgroundColor="{AppThemeBinding Light=#F4F6FA, Dark=#12141A}">
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="12,8">
+
+        <Border Grid.Row="0"
+                BackgroundColor="{AppThemeBinding Light=#E8F0FE, Dark=#1B2230}"
+                Padding="12,8"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 12"
+                Margin="0,0,0,8">
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="Състояние:" FontSize="13" TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}" />
+                <Label x:Name="ConnectionLabel" Text="Изключено" FontSize="13" FontAttributes="Bold" TextColor="#B45309" />
+            </HorizontalStackLayout>
+        </Border>
+
+        <CollectionView x:Name="MessagesView"
+                        Grid.Row="1"
+                        SelectionMode="None">
+            <CollectionView.EmptyView>
+                <Label Text="Все още няма съобщения."
+                       FontSize="14"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border HorizontalOptions="{Binding Align}"
+                            BackgroundColor="{Binding BubbleColor}"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 14"
+                            Padding="12,8"
+                            Margin="0,3"
+                            MaximumWidthRequest="300">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding Text}" FontSize="15" TextColor="{Binding TextColor}" LineBreakMode="WordWrap" />
+                            <Label Text="{Binding Time}" FontSize="10" TextColor="{Binding TextColor}" Opacity="0.7" HorizontalOptions="End" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0">
+            <Border Grid.Column="0"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light=#D3D9E3, Dark=#2A2F3A}"
+                    BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1B1F27}"
+                    Padding="12,4"
+                    StrokeShape="RoundRectangle 12">
+                <Entry x:Name="MessageEntry"
+                       Placeholder="Съобщение"
+                       FontSize="16"
+                       ReturnType="Send"
+                       Completed="OnSendClicked" />
+            </Border>
+            <Button Grid.Column="1"
+                    Text="Изпрати"
+                    Clicked="OnSendClicked"
+                    FontSize="16"
+                    BackgroundColor="#1B6EF3"
+                    TextColor="White"
+                    CornerRadius="12"
+                    HeightRequest="52"
+                    WidthRequest="96" />
+        </Grid>
+    </Grid>
+</ContentPage>
