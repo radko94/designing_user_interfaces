@@ -10,7 +10,7 @@
         "projectUniqueName": "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/SecureMesh.Core/SecureMesh.Core.csproj",
         "projectName": "SecureMesh.Core",
         "projectPath": "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/SecureMesh.Core/SecureMesh.Core.csproj",
-        "packagesPath": "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/.nuget/packages",
+        "packagesPath": "/home/rapostolov/.nuget/packages/",
         "outputPath": "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/SecureMesh.Core/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SecureMesh.Core.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e09897435a3a2f0156cf486be940eafa5810390e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+31000b3f1f00d6a1fa06e6ad96874d1593d844ed")]
 [assembly: System.Reflection.AssemblyProductAttribute("SecureMesh.Core.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SecureMesh.Core.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
