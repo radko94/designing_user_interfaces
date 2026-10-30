@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true"></application>
-
-	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-	<uses-permission android:name="android.permission.INTERNET" />
+	<!-- allowBackup="false" disables Android Auto Backup (cloud) and
+	     device-to-device transfer, keeping the identity private keys and the
+	     encrypted DB off-device-exfiltration-safe. fullBackupContent="false"
+	     is the legacy (API <= 30) belt-and-suspenders exclusion. -->
+	<application android:allowBackup="false" android:fullBackupContent="false" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true"></application>
 
 	<!-- Legacy Bluetooth (Android 11 / API 30 and below) -->
 	<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />

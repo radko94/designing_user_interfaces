@@ -10,9 +10,10 @@ It is inspired by **Bridgefy** and **Briar**, but its differentiator is **real, 
 
 ## Technology stack
 
-- C# on .NET 10 (`net10.0-android`), .NET MAUI (XAML), MVVM.
-- **Cryptography** — `Sodium.Core` (libsodium): X25519 (ECDH), Ed25519 (signatures), plus .NET `AesGcm` (AES-256-GCM) and `HKDF`. A per-message key ratchet provides forward secrecy.
-- **Persistence** — `sqlite-net-pcl` (SQLite): contacts, conversations, messages (encrypted at rest), sync state.
+- C# on .NET 10 (`net10.0-android`), .NET MAUI (XAML). The UI uses **code-behind** event handlers plus a lightweight **service locator** (`ServiceHelper` over the MAUI DI container) — not MVVM/data binding.
+- **Cryptography** — `Sodium.Core` (libsodium): X25519 (ECDH), Ed25519 (signatures), plus .NET `AesGcm` (AES-256-GCM) and `HKDF`.
+- **Session security** — per-session **forward secrecy**: the session root key is derived once with an X3DH-lite 3-DH handshake (identity key + signed prekey + one-time ephemeral key), then discarded. Each message consumes exactly one step of a direction-bound **message-level ratchet**; mildly out-of-order messages are handled through a bounded skipped-key cache.
+- **Persistence** — `sqlite-net-pcl` (SQLite) with **SQLite3 Multiple Ciphers** (`SQLite3MC.PCLRaw.bundle`) for **encryption at rest**; a random 32-byte database key (DEK) is held in Android Keystore-backed storage. Identity **private keys** are likewise kept in **SecureStorage** (Android Keystore), never as plaintext on disk.
 - **Bluetooth** — `Shiny.BluetoothLE` + `Shiny.BluetoothLE.Hosting` (advertising + scanning + GATT, both roles for peer-to-peer).
 - **QR** — `ZXing.Net.Maui.Controls` (generate + scan).
 - Architecture: a `SecureMesh.Core` library (crypto + domain, desktop-testable) referenced by the `SecureMesh.App` MAUI app and the `SecureMesh.Core.Tests` xUnit project.
@@ -22,7 +23,7 @@ It is inspired by **Bridgefy** and **Briar**, but its differentiator is **real, 
 This is an **Android-targeted** app. On Linux it builds the Android target; the evaluation host is **Windows 11** (Android emulator or device).
 
 - .NET 10 SDK with the `maui-android` workload.
-- **JDK 21** (the .NET 10 Android workload requires JDK 21; newer JDKs such as 26 are rejected).
+- **JDK 21** for Android builds. The .NET 10 Android workload requires JDK 21; JDK 26 fails with the Xamarin.Android error **XA0030** ("Building with JDK version … is not supported").
 - Android SDK + two physical Android devices for real testing (the emulator has no Bluetooth radio).
 
 ## Build & test
@@ -36,7 +37,7 @@ dotnet build SecureMesh.App/SecureMesh.App.csproj -f net10.0-android -c Debug
 dotnet test SecureMesh.Core.Tests/SecureMesh.Core.Tests.csproj
 ```
 
-The test suite (37 tests) covers key generation, X25519 agreement, AES-GCM tamper detection, Ed25519 signatures, the ratchet, the message envelope, and the full end-to-end encrypted message flow over mock transports.
+The test suite (72 tests) covers key generation, X25519 agreement, AES-GCM tamper detection, Ed25519 signatures, the ratchet, message envelopes, forward-secrecy reliability, group-chat domain logic, and the full end-to-end encrypted message flow over mock transports.
 
 ## How to use (two phones)
 
@@ -47,8 +48,9 @@ The test suite (37 tests) covers key generation, X25519 agreement, AES-GCM tampe
 
 ## Known limitations
 
-- **1:1 chat only** (MVP). Group chat is modeled (tables + repositories) but not wired to the transport yet.
-- **BLE runtime is unverified** — the app compiles and the logic is unit-tested, but real advertising/connection/messaging has not been exercised on two physical devices.
+- **1:1 chat only** (MVP). Group chat is being wired: the domain model, repositories, and pairwise group session keying exist and are unit-tested, but the transport and UI are not finished.
+- **Session forward secrecy requires peers to be connected to establish a session.** The per-session root key is derived from a prekey handshake that needs both devices online and paired; offline/asynchronous prekey delivery is not implemented yet.
+- **BLE runtime is unverified** — the app compiles and the logic is unit-tested, but real advertising/connection/messaging has not been exercised on two physical devices (pending physical hardware).
 - **Range** is Bluetooth's: ~10–100 m. There is no relay through phones that don't run the app (physically impossible), and no cross-city delivery without the internet.
 - Chat history is stored encrypted at rest; the current UI shows session bubbles only (no re-decrypt-history view yet).
 - No voice/video (out of scope by decision).

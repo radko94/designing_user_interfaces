@@ -13,12 +13,14 @@
                    FontSize="34"
                    FontAttributes="Bold"
                    HorizontalOptions="Center"
-                   TextColor="{AppThemeBinding Light=#1B6EF3, Dark=#6EA8FE}" />
+                   TextColor="{AppThemeBinding Light=#1B6EF3, Dark=#6EA8FE}"
+                   SemanticProperties.HeadingLevel="Level1" />
 
             <Label Text="Създайте своята идентичност"
                    FontSize="18"
                    HorizontalOptions="Center"
-                   TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}" />
+                   TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}"
+                   SemanticProperties.HeadingLevel="Level2" />
 
             <Label x:Name="HintLabel"
                    Text="Въведете име. Приложението ще генерира криптографски ключове за вашата самоличност."
@@ -35,7 +37,8 @@
                        Placeholder="Вашето име"
                        FontSize="16"
                        ReturnType="Done"
-                       Completed="OnCreateClicked" />
+                       Completed="OnCreateClicked"
+                       SemanticProperties.Description="Поле за въвеждане на името ви за показване." />
             </Border>
 
             <Button x:Name="CreateBtn"
@@ -45,14 +48,16 @@
                     BackgroundColor="#1B6EF3"
                     TextColor="White"
                     CornerRadius="12"
-                    HeightRequest="52" />
+                    HeightRequest="52"
+                    SemanticProperties.Description="Генерира криптографските ви ключове и създава самоличността." />
 
             <VerticalStackLayout x:Name="QrSection" IsVisible="False" Spacing="14">
                 <Label Text="Вашият QR код"
                        FontSize="16"
                        FontAttributes="Bold"
                        HorizontalOptions="Center"
-                       TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}" />
+                       TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}"
+                       SemanticProperties.HeadingLevel="Level2" />
                 <Label Text="Покажете го на другия потребител, за да ви добави като контакт."
                        FontSize="13"
                        HorizontalOptions="Center"
@@ -63,13 +68,48 @@
                         StrokeThickness="1"
                         Stroke="#D3D9E3"
                         StrokeShape="RoundRectangle 16"
-                        HorizontalOptions="Center">
+                        HorizontalOptions="Center"
+                        SemanticProperties.Description="QR код с вашата самоличност. Сканирайте го с другото устройство, за да ви добави като контакт.">
                     <zxing:BarcodeGeneratorView x:Name="QrView"
                                                 WidthRequest="240"
                                                 HeightRequest="240"
                                                 Format="QrCode"
                                                 ForegroundColor="Black" />
                 </Border>
+
+                <Label Text="Код за сдвояване"
+                       FontSize="15"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"
+                       TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Label Text="Ако другото устройство няма камера, копирайте кода и го изпратете по друг канал."
+                       FontSize="12"
+                       HorizontalOptions="Center"
+                       TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+
+                <Border StrokeThickness="1"
+                        Stroke="{AppThemeBinding Light=#D3D9E3, Dark=#2A2F3A}"
+                        BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1B1F27}"
+                        Padding="12,6"
+                        StrokeShape="RoundRectangle 12">
+                    <Editor x:Name="PairingCodeEditor"
+                            IsReadOnly="True"
+                            AutoSize="TextChanges"
+                            FontSize="12"
+                            TextColor="{AppThemeBinding Light=#1F2430, Dark=#E7EAF0}"
+                            SemanticProperties.Description="Код за сдвояване. Можете да го изберете и копирате ръчно." />
+                </Border>
+
+                <Button x:Name="CopyCodeBtn"
+                        Text="Копирай кода за сдвояване"
+                        Clicked="OnCopyPairingCodeClicked"
+                        FontSize="16"
+                        BackgroundColor="#1B6EF3"
+                        TextColor="White"
+                        CornerRadius="12"
+                        HeightRequest="52"
+                        SemanticProperties.Description="Копира кода за сдвояване в клипборда." />
 
                 <Button x:Name="ContinueBtn"
                         Text="Към контактите"

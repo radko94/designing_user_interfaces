@@ -84,11 +84,9 @@ public sealed class SyncService
             {
                 ConversationId = conversationId,
                 Seq = source.Seq,
+                SenderSeq = source.SenderSeq,
                 SenderId = source.SenderId,
-                Ciphertext = source.Ciphertext,
-                Nonce = source.Nonce,
-                Tag = source.Tag,
-                Signature = source.Signature,
+                Plaintext = source.Plaintext,
                 Timestamp = source.Timestamp,
                 Status = MessageStatus.Received,
             };
@@ -109,7 +107,11 @@ public sealed class SyncService
                 {
                     ConversationId = conversationId,
                     Seq = e.Seq,
+                    SenderSeq = e.SenderSeq,
                     SenderPublic = e.SenderPublic,
+                    IsPrekey = e.IsPrekey,
+                    SenderEkPublic = e.SenderEkPublic,
+                    SenderIkPublic = e.SenderIkPublic,
                     RecipientContactId = e.RecipientContactId,
                     Nonce = e.Nonce,
                     Ciphertext = e.Ciphertext,

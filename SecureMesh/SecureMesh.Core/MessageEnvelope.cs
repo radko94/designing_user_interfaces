@@ -4,9 +4,11 @@ namespace SecureMesh.Core;
 
 /// <summary>
 /// An authenticated, signed message envelope. The plaintext is encrypted with
-/// AES-256-GCM under a session key; the AAD is the header (sender Ed25519
-/// public key || nonce), and the sender then signs (AAD || ciphertext || tag)
-/// with their Ed25519 key so the recipient can authenticate the sender.
+/// AES-256-GCM under a session key; the AAD is the context-binding header
+/// (context || sender Ed25519 public key || nonce), and the sender then signs
+/// (context || sender public key || nonce || ciphertext || tag) with their
+/// Ed25519 key so the recipient can authenticate both the sender and the
+/// routing context.
 /// </summary>
 public sealed class MessageEnvelope
 {
@@ -43,36 +45,43 @@ public sealed class MessageEnvelope
     public byte[] Signature => (byte[])_signature.Clone();
 
     /// <summary>
-    /// Builds the associated data: sender Ed25519 public key followed by the
-    /// nonce. (The task signature carries no metadata parameter, so the
-    /// "serialized metadata" portion of the header is empty.)
+    /// Builds the associated data: the context binding, followed by the sender
+    /// Ed25519 public key and the nonce.
     /// </summary>
-    private static byte[] BuildAad(byte[] senderPublic, byte[] nonce)
+    private static byte[] BuildAad(byte[] context, byte[] senderPublic, byte[] nonce)
     {
-        var aad = new byte[senderPublic.Length + nonce.Length];
-        senderPublic.CopyTo(aad, 0);
-        nonce.CopyTo(aad, senderPublic.Length);
+        var aad = new byte[context.Length + senderPublic.Length + nonce.Length];
+        context.CopyTo(aad, 0);
+        senderPublic.CopyTo(aad, context.Length);
+        nonce.CopyTo(aad, context.Length + senderPublic.Length);
         return aad;
     }
 
     /// <summary>
     /// Encrypts <paramref name="plaintext"/> with AES-256-GCM under
-    /// <paramref name="key"/>, then signs the header + ciphertext + tag with the
-    /// sender's Ed25519 key.
+    /// <paramref name="key"/>, binding <paramref name="context"/> into the AAD,
+    /// then signs context || header || ciphertext || tag with the sender's
+    /// Ed25519 key.
     /// </summary>
-    public static MessageEnvelope Seal(byte[] key, byte[] plaintext, byte[] senderEdPublic, byte[] senderEdPrivate)
+    public static MessageEnvelope Seal(
+        byte[] key,
+        byte[] plaintext,
+        byte[] senderEdPublic,
+        byte[] senderEdPrivate,
+        byte[] context)
     {
         ArgumentNullException.ThrowIfNull(key);
         ArgumentNullException.ThrowIfNull(plaintext);
         ArgumentNullException.ThrowIfNull(senderEdPublic);
         ArgumentNullException.ThrowIfNull(senderEdPrivate);
+        ArgumentNullException.ThrowIfNull(context);
         if (key.Length != SymmetricCrypto.KeyBytes)
             throw new ArgumentException($"AES-256 requires a {SymmetricCrypto.KeyBytes}-byte key.", nameof(key));
 
         var nonce = new byte[SymmetricCrypto.NonceBytes];
         RandomNumberGenerator.Fill(nonce);
 
-        var aad = BuildAad(senderEdPublic, nonce);
+        var aad = BuildAad(context, senderEdPublic, nonce);
 
         var ciphertext = new byte[plaintext.Length];
         var tag = new byte[SymmetricCrypto.TagBytes];
@@ -81,11 +90,12 @@ public sealed class MessageEnvelope
             aes.Encrypt(nonce, plaintext, ciphertext, tag, aad);
         }
 
-        // Sign the authenticated material: AAD || ciphertext || tag.
-        var signed = new byte[aad.Length + ciphertext.Length + tag.Length];
-        aad.CopyTo(signed, 0);
-        ciphertext.CopyTo(signed, aad.Length);
-        tag.CopyTo(signed, aad.Length + ciphertext.Length);
+        // Sign the authenticated material: context || AAD || ciphertext || tag.
+        var signed = new byte[context.Length + aad.Length + ciphertext.Length + tag.Length];
+        context.CopyTo(signed, 0);
+        aad.CopyTo(signed, context.Length);
+        ciphertext.CopyTo(signed, context.Length + aad.Length);
+        tag.CopyTo(signed, context.Length + aad.Length + ciphertext.Length);
 
         var signature = Signing.Sign(signed, senderEdPrivate);
 
@@ -93,14 +103,16 @@ public sealed class MessageEnvelope
     }
 
     /// <summary>
-    /// Verifies the sender's signature, then decrypts and authenticates the
-    /// ciphertext. Throws <see cref="CryptographicException"/> on a signature
-    /// failure or a tampered/incorrectly-keyed envelope.
+    /// Verifies the sender's signature over the context-bound material, then
+    /// decrypts and authenticates the ciphertext. Throws
+    /// <see cref="CryptographicException"/> on a signature failure, a
+    /// tampered/incorrectly-keyed envelope, or a wrong <paramref name="context"/>.
     /// </summary>
-    public static byte[] Open(MessageEnvelope env, byte[] key)
+    public static byte[] Open(MessageEnvelope env, byte[] key, byte[] context)
     {
         ArgumentNullException.ThrowIfNull(env);
         ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(context);
 
         var senderPublic = env.SenderPublic;
         var nonce = env.Nonce;
@@ -108,12 +120,13 @@ public sealed class MessageEnvelope
         var tag = env.Tag;
         var signature = env.Signature;
 
-        var aad = BuildAad(senderPublic, nonce);
+        var aad = BuildAad(context, senderPublic, nonce);
 
-        var signed = new byte[aad.Length + ciphertext.Length + tag.Length];
-        aad.CopyTo(signed, 0);
-        ciphertext.CopyTo(signed, aad.Length);
-        tag.CopyTo(signed, aad.Length + ciphertext.Length);
+        var signed = new byte[context.Length + aad.Length + ciphertext.Length + tag.Length];
+        context.CopyTo(signed, 0);
+        aad.CopyTo(signed, context.Length);
+        ciphertext.CopyTo(signed, context.Length + aad.Length);
+        tag.CopyTo(signed, context.Length + aad.Length + ciphertext.Length);
 
         if (!Signing.Verify(signed, signature, senderPublic))
             throw new CryptographicException("Message envelope signature verification failed.");

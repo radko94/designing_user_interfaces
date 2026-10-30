@@ -1,3 +1,4 @@
+using Microsoft.Maui.ApplicationModel.DataTransfer;
 using SecureMesh.App.Services;
 
 namespace SecureMesh.App.Pages;
@@ -6,6 +7,7 @@ public partial class IdentityPage : ContentPage
 {
     private readonly IdentityService _identity;
     private bool _navigating;
+    private string _pairingCode = "";
 
     public IdentityPage()
     {
@@ -17,13 +19,14 @@ public partial class IdentityPage : ContentPage
     {
         base.OnAppearing();
 
-        // If the identity was already set up on a previous launch, skip ahead.
+        // IdentityPage is only pushed when onboarding is needed; if the identity
+        // was set up in the meantime, pop back to the shell tabs.
         if (_identity.IsInitialized)
         {
             if (_navigating)
                 return;
             _navigating = true;
-            await Shell.Current.GoToAsync("//contacts");
+            await Shell.Current.GoToAsync("..");
         }
     }
 
@@ -38,8 +41,9 @@ public partial class IdentityPage : ContentPage
 
         _identity.SetNickname(nickname);
 
-        var payload = PeerQrPayload.FromIdentity(_identity.Nickname, _identity.Identity).Encode();
-        QrView.Value = payload;
+        _pairingCode = PeerQrPayload.FromIdentity(_identity.Nickname, _identity.Identity).Encode();
+        QrView.Value = _pairingCode;
+        PairingCodeEditor.Text = _pairingCode;
 
         HintLabel.Text = "Идентичността е създадена. Сканирайте този код с другото устройство.";
         CreateBtn.IsVisible = false;
@@ -47,11 +51,20 @@ public partial class IdentityPage : ContentPage
         QrSection.IsVisible = true;
     }
 
+    private async void OnCopyPairingCodeClicked(object? sender, EventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_pairingCode))
+            return;
+
+        await Clipboard.Default.SetTextAsync(_pairingCode);
+        await DisplayAlertAsync("Копирано", "Кодът за сдвояване е копиран в клипборда.", "Добре");
+    }
+
     private async void OnContinueClicked(object? sender, EventArgs e)
     {
         if (!_identity.IsInitialized || _navigating)
             return;
         _navigating = true;
-        await Shell.Current.GoToAsync("//contacts");
+        await Shell.Current.GoToAsync("..");
     }
 }

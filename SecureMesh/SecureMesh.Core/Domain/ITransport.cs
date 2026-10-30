@@ -17,6 +17,12 @@ public interface ITransport : IDisposable
     /// <summary>Raised with the peer id when a peer disconnects.</summary>
     event Action<string>? PeerDisconnected;
 
+    /// <summary>True while the transport is actively scanning/advertising for peers.</summary>
+    bool IsSearching { get; }
+
+    /// <summary>Raised when <see cref="IsSearching"/> changes.</summary>
+    event Action<bool>? SearchingChanged;
+
     Task StartAsync();
 
     Task StopAsync();

@@ -8,7 +8,8 @@
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12" MaximumWidthRequest="480">
 
-            <Label Text="Настройки" FontSize="22" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1F2430, Dark=#E7EAF0}" />
+            <Label Text="Настройки" FontSize="22" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1F2430, Dark=#E7EAF0}"
+                   SemanticProperties.HeadingLevel="Level1" />
 
             <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1B1F27}"
                     StrokeThickness="1"
@@ -17,12 +18,14 @@
                     Padding="14">
                 <Grid ColumnDefinitions="*,Auto">
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Реле (препредаване)" FontSize="16" TextColor="{AppThemeBinding Light=#1F2430, Dark=#E7EAF0}" />
+                        <Label Text="Реле (препредаване)" FontSize="16" TextColor="{AppThemeBinding Light=#1F2430, Dark=#E7EAF0}"
+                               SemanticProperties.HeadingLevel="Level2" />
                         <Label Text="Офлайн режим — директна Bluetooth връзка. Релето не е налично в тази версия."
                                FontSize="12"
                                TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
                     </VerticalStackLayout>
-                    <Switch Grid.Column="1" IsToggled="False" IsEnabled="False" VerticalOptions="Center" />
+                    <Switch Grid.Column="1" IsToggled="False" IsEnabled="False" VerticalOptions="Center"
+                            SemanticProperties.Description="Неактивно — релето не е налично в тази версия." />
                 </Grid>
             </Border>
 
@@ -32,7 +35,8 @@
                     BackgroundColor="#1B6EF3"
                     TextColor="White"
                     CornerRadius="12"
-                    HeightRequest="52" />
+                    HeightRequest="52"
+                    SemanticProperties.Description="Споделя публичните ви ключове и контакти като JSON файл." />
 
             <Button Text="Изтриване на локалните данни"
                     Clicked="OnDeleteClicked"
@@ -40,7 +44,8 @@
                     BackgroundColor="#DC2626"
                     TextColor="White"
                     CornerRadius="12"
-                    HeightRequest="52" />
+                    HeightRequest="52"
+                    SemanticProperties.Description="Изтрива безвъзвратно самоличността, контактите и съобщенията от устройството." />
 
         </VerticalStackLayout>
     </ScrollView>

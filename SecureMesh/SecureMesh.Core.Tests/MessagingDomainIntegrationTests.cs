@@ -9,7 +9,7 @@ namespace SecureMesh.Core.Tests;
 public class MessagingDomainIntegrationTests
 {
     // ---------------------------------------------------------------------
-    // 1. Session key agreement
+    // 1. Session key agreement (X3DH-lite with a one-time EK)
     // ---------------------------------------------------------------------
     [Fact]
     public void SessionKey_IsDerivedIdentically_ByBothParties()
@@ -17,32 +17,53 @@ public class MessagingDomainIntegrationTests
         var alice = KeyGeneration.CreateIdentity();
         var bob = KeyGeneration.CreateIdentity();
 
-        var aliceKey = CryptoSession.EstablishSessionKey(alice.DhPrivateKey, bob.DhPublicKey);
-        var bobKey = CryptoSession.EstablishSessionKey(bob.DhPrivateKey, alice.DhPublicKey);
+        var (aliceSend, aliceRecv, ekPublic) = CryptoSession.EstablishInitiatorSession(
+            alice, bob.DhPublicKey, bob.EphemeralDhPublicKey, CryptoSession.DefaultInfo);
+        var (bobSend, bobRecv) = CryptoSession.EstablishResponderSession(
+            bob, alice.DhPublicKey, ekPublic, CryptoSession.DefaultInfo);
 
-        Assert.Equal(32, aliceKey.Length);
-        Assert.Equal(aliceKey, bobKey);
+        // Both peers derive the same direction-split ratchet chains from the
+        // same root session key.
+        Assert.Equal(aliceSend, bobRecv);
+        Assert.Equal(aliceRecv, bobSend);
+    }
+
+    [Fact]
+    public void GroupSessionKey_DiffersFromOneToOne()
+    {
+        var alice = KeyGeneration.CreateIdentity();
+        var bob = KeyGeneration.CreateIdentity();
+        var ek = KeyGeneration.GenerateX25519KeyPair();
+        try
+        {
+            var (groupSend, groupRecv) = CryptoSession.EstablishInitiatorSessionWithEk(
+                alice, ek.PrivateKey, bob.DhPublicKey, bob.EphemeralDhPublicKey, CryptoSession.GroupInfo);
+            var (oneSend, oneRecv) = CryptoSession.EstablishInitiatorSessionWithEk(
+                alice, ek.PrivateKey, bob.DhPublicKey, bob.EphemeralDhPublicKey, CryptoSession.DefaultInfo);
+
+            // Domain separation: identical inputs + EK but a different info string.
+            Assert.False(groupSend.SequenceEqual(oneSend));
+            Assert.False(groupRecv.SequenceEqual(oneRecv));
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(ek.PrivateKey);
+        }
     }
 
     // ---------------------------------------------------------------------
-    // 2. CryptoSession ratchet round-trip + tamper detection
+    // 2. CryptoSession direction-split ratchet round-trip + tamper detection
     // ---------------------------------------------------------------------
     [Fact]
     public void CryptoSession_SealOpen_RoundTrips_And_DetectsTampering()
     {
-        var alice = KeyGeneration.CreateIdentity();
-        var bob = KeyGeneration.CreateIdentity();
-        var sessionKey = CryptoSession.EstablishSessionKey(alice.DhPrivateKey, bob.DhPublicKey);
+        var (alice, bob) = CreateSessions();
+
         var plaintext = Encoding.UTF8.GetBytes("hello bob");
+        var context = MessageContext.Build(1, 1);
+        var envelope = alice.Seal(plaintext, context);
 
-        var aliceSession = new CryptoSession(
-            sessionKey, sessionKey, alice.SigningPublicKey, alice.SigningPrivateKey);
-        var envelope = aliceSession.Seal(plaintext);
-
-        var bobSession = new CryptoSession(
-            sessionKey, sessionKey, bob.SigningPublicKey, bob.SigningPrivateKey);
-        var opened = bobSession.Open(envelope);
-
+        var opened = bob.Open(envelope, context, seq: 1, new Dictionary<long, byte[]>());
         Assert.Equal(plaintext, opened);
 
         var tamperedCiphertext = envelope.Ciphertext;
@@ -50,30 +71,28 @@ public class MessagingDomainIntegrationTests
         var tampered = new MessageEnvelope(
             envelope.SenderPublic, envelope.Nonce, tamperedCiphertext, envelope.Tag, envelope.Signature);
 
-        Assert.ThrowsAny<CryptographicException>(() => bobSession.Open(tampered));
+        Assert.ThrowsAny<CryptographicException>(() =>
+            bob.Open(tampered, context, seq: 1, new Dictionary<long, byte[]>()));
     }
 
     [Fact]
-    public void CryptoSession_UsesFreshRatchetKey_ForEachMessage()
+    public void CryptoSession_UsesFreshRatchetKey_ForEachMessage_InEachDirection()
     {
-        var alice = KeyGeneration.CreateIdentity();
-        var bob = KeyGeneration.CreateIdentity();
-        var sessionKey = CryptoSession.EstablishSessionKey(alice.DhPrivateKey, bob.DhPublicKey);
+        var (alice, bob) = CreateSessions();
 
-        var aliceSession = new CryptoSession(
-            sessionKey, sessionKey, alice.SigningPublicKey, alice.SigningPrivateKey);
-        var bobSession = new CryptoSession(
-            sessionKey, sessionKey, bob.SigningPublicKey, bob.SigningPrivateKey);
+        var first = alice.Seal(Encoding.UTF8.GetBytes("one"), MessageContext.Build(1, 1));
+        var second = alice.Seal(Encoding.UTF8.GetBytes("two"), MessageContext.Build(1, 2));
 
-        var first = aliceSession.Seal(Encoding.UTF8.GetBytes("one"));
-        var second = aliceSession.Seal(Encoding.UTF8.GetBytes("two"));
-
-        // Different message keys -> different ciphertext (and nonce).
         Assert.NotEqual(first.Ciphertext, second.Ciphertext);
 
-        // Bob decrypts in order.
-        Assert.Equal("one", Encoding.UTF8.GetString(bobSession.Open(first)));
-        Assert.Equal("two", Encoding.UTF8.GetString(bobSession.Open(second)));
+        var bobSkipped = new Dictionary<long, byte[]>();
+        Assert.Equal("one", Encoding.UTF8.GetString(bob.Open(first, MessageContext.Build(1, 1), 1, bobSkipped)));
+        Assert.Equal("two", Encoding.UTF8.GetString(bob.Open(second, MessageContext.Build(1, 2), 2, bobSkipped)));
+
+        // Bob's send chain is independent of Alice's send chain.
+        var bobReply = bob.Seal(Encoding.UTF8.GetBytes("reply"), MessageContext.Build(1, 1));
+        var aliceSkipped = new Dictionary<long, byte[]>();
+        Assert.Equal("reply", Encoding.UTF8.GetString(alice.Open(bobReply, MessageContext.Build(1, 1), 1, aliceSkipped)));
     }
 
     // ---------------------------------------------------------------------
@@ -85,8 +104,7 @@ public class MessagingDomainIntegrationTests
         using var aliceDb = Database.InMemory();
         using var bobDb = Database.InMemory();
 
-        var alice = KeyGeneration.CreateIdentity();
-        var bob = KeyGeneration.CreateIdentity();
+        var (alice, bob) = TestData.OrderedIdentities(); // alice = initiator
 
         var aliceTransport = new MockTransport("alice");
         var bobTransport = new MockTransport("bob");
@@ -95,8 +113,8 @@ public class MessagingDomainIntegrationTests
         var aliceContacts = new ContactsService(aliceDb);
         var bobContacts = new ContactsService(bobDb);
 
-        var bobContactForAlice = aliceContacts.AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey);
-        var aliceContactForBob = bobContacts.AddContact("Alice", alice.SigningPublicKey, alice.DhPublicKey);
+        var bobContactForAlice = aliceContacts.AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey, bob.EphemeralDhPublicKey);
+        var aliceContactForBob = bobContacts.AddContact("Alice", alice.SigningPublicKey, alice.DhPublicKey, alice.EphemeralDhPublicKey);
 
         var aliceChat = new ChatService(alice, aliceTransport, aliceDb);
         var bobChat = new ChatService(bob, bobTransport, bobDb);
@@ -110,13 +128,10 @@ public class MessagingDomainIntegrationTests
         var aliceConversation = aliceChat.EnsureConversation(bobContactForAlice);
         var bobConversation = bobChat.EnsureConversation(aliceContactForBob);
 
-        // Sanity: both peers derived the same session key.
-        Assert.Equal(aliceConversation.SessionKey, bobConversation.SessionKey);
-
         var message = await aliceChat.SendText(aliceConversation.Id, "hello bob");
 
         Assert.Equal(1, message.Seq);
-        Assert.Equal(MessageStatus.Sent, message.Status);
+        Assert.Equal(MessageStatus.Pending, message.Status); // prekey stays Pending until Bob's ACK
 
         // The framed bytes on the wire must NOT be the plaintext.
         var wire = aliceTransport.LastSentPayload;
@@ -128,13 +143,13 @@ public class MessagingDomainIntegrationTests
         Assert.Equal("hello bob", delivered[0].Plaintext);
         Assert.Equal(bobConversation.Id, delivered[0].ConversationId);
 
-        // Both sides persisted an encrypted message.
+        // Both sides persisted the plaintext history (no session key / ciphertext).
         var aliceMessages = new MessageRepository(aliceDb.Connection).ForConversation(aliceConversation.Id);
         var bobMessages = new MessageRepository(bobDb.Connection).ForConversation(bobConversation.Id);
         Assert.Single(aliceMessages);
         Assert.Single(bobMessages);
         Assert.Equal(MessageStatus.Received, bobMessages[0].Status);
-        Assert.DoesNotContain("hello bob", Encoding.UTF8.GetString(bobMessages[0].Ciphertext));
+        Assert.Equal("hello bob", bobMessages[0].Plaintext);
     }
 
     // ---------------------------------------------------------------------
@@ -158,6 +173,7 @@ public class MessagingDomainIntegrationTests
             {
                 ConversationId = conversationId,
                 Seq = seq,
+                SenderSeq = seq,
                 SenderId = 0,
                 Timestamp = DateTime.UtcNow,
             });
@@ -169,6 +185,7 @@ public class MessagingDomainIntegrationTests
             {
                 ConversationId = conversationId,
                 Seq = seq,
+                SenderSeq = seq,
                 SenderId = 1,
                 Timestamp = DateTime.UtcNow,
             });
@@ -208,8 +225,9 @@ public class MessagingDomainIntegrationTests
         var service = new ContactsService(db);
         var identity = KeyGeneration.CreateIdentity();
 
-        var contact = service.AddContact("Alice", identity.SigningPublicKey, identity.DhPublicKey);
+        var contact = service.AddContact("Alice", identity.SigningPublicKey, identity.DhPublicKey, identity.EphemeralDhPublicKey);
         Assert.False(contact.Verified);
+        Assert.Equal(identity.EphemeralDhPublicKey, contact.EphemeralX25519Pub);
         Assert.Single(service.ListContacts());
 
         service.VerifyContact(contact.Id);
@@ -217,6 +235,10 @@ public class MessagingDomainIntegrationTests
 
         service.RemoveContact(contact.Id);
         Assert.Empty(service.ListContacts());
+
+        // 3-arg overload remains available (empty SPK) for compatibility.
+        var legacy = service.AddContact("Legacy", identity.SigningPublicKey, identity.DhPublicKey);
+        Assert.Empty(legacy.EphemeralX25519Pub);
     }
 
     [Fact]
@@ -234,5 +256,26 @@ public class MessagingDomainIntegrationTests
         Assert.Single(loaded);
         Assert.Equal("Team", loaded[0].Name);
         Assert.Single(members.ForGroup(group.Id));
+    }
+
+    // ---------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------
+    private static (CryptoSession Alice, CryptoSession Bob) CreateSessions()
+    {
+        var alice = KeyGeneration.CreateIdentity();
+        var bob = KeyGeneration.CreateIdentity();
+
+        var (aliceSend, aliceRecv, ekPublic) = CryptoSession.EstablishInitiatorSession(
+            alice, bob.DhPublicKey, bob.EphemeralDhPublicKey, CryptoSession.DefaultInfo);
+        var (bobSend, bobRecv) = CryptoSession.EstablishResponderSession(
+            bob, alice.DhPublicKey, ekPublic, CryptoSession.DefaultInfo);
+
+        Assert.Equal(aliceSend, bobRecv); // A's send == B's receive
+        Assert.Equal(aliceRecv, bobSend); // A's receive == B's send
+
+        return (
+            new CryptoSession(aliceSend, aliceRecv, alice.SigningPublicKey, alice.SigningPrivateKey),
+            new CryptoSession(bobSend, bobRecv, bob.SigningPublicKey, bob.SigningPrivateKey));
     }
 }

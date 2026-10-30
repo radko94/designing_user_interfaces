@@ -20,6 +20,11 @@ public sealed class MockTransport : ITransport
     public event Action<string>? PeerConnected;
     public event Action<string>? PeerDisconnected;
 
+    /// <summary>The mock transport never searches; the event is never raised.</summary>
+    public bool IsSearching => false;
+
+    public event Action<bool>? SearchingChanged;
+
     /// <summary>The last payload passed to <see cref="SendAsync"/> (defensive copy).</summary>
     public byte[]? LastSentPayload { get; private set; }
 

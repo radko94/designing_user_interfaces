@@ -11,10 +11,10 @@ public class GroupChatTests
     private const string GroupKey = "trip-xyz";
 
     // ---------------------------------------------------------------------
-    // 1. Pairwise session keys are derived identically by both sides
+    // 1. Pairwise sessions are established identically by both sides (lazily)
     // ---------------------------------------------------------------------
     [Fact]
-    public void GroupMemberKeys_AreDerivedIdentically_ByBothSides()
+    public async Task GroupMemberKeys_AreEstablishedIdentically_ByBothSides()
     {
         using var aliceDb = Database.InMemory();
         using var bobDb = Database.InMemory();
@@ -22,20 +22,36 @@ public class GroupChatTests
         var alice = KeyGeneration.CreateIdentity();
         var bob = KeyGeneration.CreateIdentity();
 
-        var aliceChat = new GroupChatService(alice, new MockTransport("alice"), aliceDb);
-        var bobChat = new GroupChatService(bob, new MockTransport("bob"), bobDb);
+        var aliceTransport = new MockTransport("alice");
+        var bobTransport = new MockTransport("bob");
+        aliceTransport.Connect(bobTransport);
 
-        var bobContactOnAlice = new ContactsService(aliceDb).AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey);
-        var aliceContactOnBob = new ContactsService(bobDb).AddContact("Alice", alice.SigningPublicKey, alice.DhPublicKey);
+        var aliceChat = new GroupChatService(alice, aliceTransport, aliceDb);
+        var bobChat = new GroupChatService(bob, bobTransport, bobDb);
+        var bobDelivered = new List<IncomingMessage>();
+        bobChat.MessageDelivered += bobDelivered.Add;
+
+        var bobContactOnAlice = new ContactsService(aliceDb).AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey, bob.EphemeralDhPublicKey);
+        var aliceContactOnBob = new ContactsService(bobDb).AddContact("Alice", alice.SigningPublicKey, alice.DhPublicKey, alice.EphemeralDhPublicKey);
 
         var aliceGroupId = aliceChat.CreateGroup("Pair", new[] { bobContactOnAlice }, GroupKey).Id;
         var bobGroupId = bobChat.CreateGroup("Pair", new[] { aliceContactOnBob }, GroupKey).Id;
 
+        // Lazy establishment: placeholder keys start unestablished.
+        Assert.False(aliceChat.GetMemberKey(aliceGroupId, bobContactOnAlice.Id)!.IsEstablished);
+
+        // Alice's first message is a prekey frame that establishes both sides.
+        await aliceChat.SendGroupMessage(aliceGroupId, "hello");
+        bobChat.HandleIncomingGroupMessage(aliceTransport.LastSentPayload!);
+        Assert.Single(bobDelivered);
+
         var aliceKey = aliceChat.GetMemberKey(aliceGroupId, bobContactOnAlice.Id)!;
         var bobKey = bobChat.GetMemberKey(bobGroupId, aliceContactOnBob.Id)!;
 
-        Assert.Equal(32, aliceKey.SessionKey.Length);
-        Assert.Equal(aliceKey.SessionKey, bobKey.SessionKey);
+        Assert.True(aliceKey.IsEstablished);
+        Assert.True(bobKey.IsEstablished);
+        Assert.Equal(aliceKey.SendRatchetState, bobKey.RecvRatchetState);
+        Assert.Equal(aliceKey.RecvRatchetState, bobKey.SendRatchetState);
     }
 
     // ---------------------------------------------------------------------
@@ -85,7 +101,7 @@ public class GroupChatTests
 
         var bobBefore = s.Bob.Delivered.Count;
         s.Bob.Chat.HandleIncomingGroupMessage(swappedWire);
-        Assert.Equal(bobBefore, s.Bob.Delivered.Count); // dropped: not Bob's copy
+        Assert.Equal(bobBefore, s.Bob.Delivered.Count); // dropped: not Bob's copy (and already delivered)
     }
 
     // ---------------------------------------------------------------------
@@ -192,8 +208,8 @@ public class GroupChatTests
         carolChat.MessageDelivered += carolDelivered.Add;
 
         // Alice + Bob only, at first.
-        var bobOnAlice = aliceContacts.AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey);
-        var aliceOnBob = bobContacts.AddContact("Alice", alice.SigningPublicKey, alice.DhPublicKey);
+        var bobOnAlice = aliceContacts.AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey, bob.EphemeralDhPublicKey);
+        var aliceOnBob = bobContacts.AddContact("Alice", alice.SigningPublicKey, alice.DhPublicKey, alice.EphemeralDhPublicKey);
 
         var aliceGroupId = aliceChat.CreateGroup("Trip", new[] { bobOnAlice }, GroupKey).Id;
         var bobGroupId = bobChat.CreateGroup("Trip", new[] { aliceOnBob }, GroupKey).Id;
@@ -204,9 +220,9 @@ public class GroupChatTests
         Assert.Single(bobDelivered);
 
         // Carol joins: Alice adds her; Carol creates the same group.
-        var carolOnAlice = aliceContacts.AddContact("Carol", carol.SigningPublicKey, carol.DhPublicKey);
-        var aliceOnCarol = carolContacts.AddContact("Alice", alice.SigningPublicKey, alice.DhPublicKey);
-        var bobOnCarol = carolContacts.AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey);
+        var carolOnAlice = aliceContacts.AddContact("Carol", carol.SigningPublicKey, carol.DhPublicKey, carol.EphemeralDhPublicKey);
+        var aliceOnCarol = carolContacts.AddContact("Alice", alice.SigningPublicKey, alice.DhPublicKey, alice.EphemeralDhPublicKey);
+        var bobOnCarol = carolContacts.AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey, bob.EphemeralDhPublicKey);
 
         aliceChat.AddMember(aliceGroupId, carolOnAlice);
         var carolGroupId = carolChat.CreateGroup("Trip", new[] { aliceOnCarol, bobOnCarol }, GroupKey).Id;
@@ -244,8 +260,8 @@ public class GroupChatTests
         var aliceChat = new GroupChatService(alice, new MockTransport("alice"), aliceDb);
         var contacts = new ContactsService(aliceDb);
 
-        var bobOnAlice = contacts.AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey);
-        var carolOnAlice = contacts.AddContact("Carol", carol.SigningPublicKey, carol.DhPublicKey);
+        var bobOnAlice = contacts.AddContact("Bob", bob.SigningPublicKey, bob.DhPublicKey, bob.EphemeralDhPublicKey);
+        var carolOnAlice = contacts.AddContact("Carol", carol.SigningPublicKey, carol.DhPublicKey, carol.EphemeralDhPublicKey);
 
         var groupId = aliceChat.CreateGroup("Team", new[] { bobOnAlice }, GroupKey).Id;
 
@@ -296,7 +312,7 @@ public class GroupChatTests
         }
 
         public Contact AddContact(Peer other) =>
-            Contacts.AddContact(other.Name, other.Identity.SigningPublicKey, other.Identity.DhPublicKey);
+            Contacts.AddContact(other.Name, other.Identity.SigningPublicKey, other.Identity.DhPublicKey, other.Identity.EphemeralDhPublicKey);
 
         public void Dispose()
         {

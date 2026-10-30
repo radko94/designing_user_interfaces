@@ -6,11 +6,13 @@ namespace SecureMesh.Core.Domain;
 
 /// <summary>
 /// Group chat following the pairwise-E2E model: every member holds a separate
-/// <see cref="GroupMemberKey"/> (session key + ratchet) for every OTHER member,
-/// and a group message is encrypted once per member. A recipient decrypts only
-/// the copy encrypted with their own pairwise key. Store-and-forward catch-up
-/// is provided by <see cref="SyncService"/> (wired through the group's local
-/// conversation).
+/// <see cref="GroupMemberKey"/> (two direction-bound ratchet chains, no root
+/// key) for every OTHER member, and a group message is encrypted once per
+/// member. A recipient decrypts only the copy encrypted with their own pairwise
+/// key. Pairwise sessions are established lazily via the same X3DH-lite prekey
+/// mechanism as 1:1; a single one-time EK is reused across all members
+/// established by one broadcast. Store-and-forward catch-up is provided by
+/// <see cref="SyncService"/>.
 /// </summary>
 public sealed class GroupChatService : IDisposable
 {
@@ -24,8 +26,11 @@ public sealed class GroupChatService : IDisposable
     private readonly GroupMemberRepository _members;
     private readonly GroupMemberKeyRepository _memberKeys;
     private readonly GroupMessageEnvelopeRepository _groupEnvelopes;
+    private readonly SkippedKeyRepository _skippedKeys;
+    private readonly PendingMessageRepository _pending;
     private readonly SyncService _sync;
 
+    private readonly Dictionary<(int ConversationId, int SenderId), ReceiveChainState> _receive = new();
     private bool _started;
 
     /// <summary>Raised when an incoming group message has been decrypted and stored.</summary>
@@ -47,6 +52,8 @@ public sealed class GroupChatService : IDisposable
         _members = new GroupMemberRepository(db.Connection);
         _memberKeys = new GroupMemberKeyRepository(db.Connection);
         _groupEnvelopes = new GroupMessageEnvelopeRepository(db.Connection);
+        _skippedKeys = new SkippedKeyRepository(db.Connection);
+        _pending = new PendingMessageRepository(db.Connection);
         _sync = new SyncService(_messages, _syncStates, _groupEnvelopes);
     }
 
@@ -75,29 +82,31 @@ public sealed class GroupChatService : IDisposable
     // ------------------------------------------------------------------
 
     /// <summary>
-    /// Creates a group (and its local conversation) with the given OTHER members,
-    /// deriving a pairwise <see cref="GroupMemberKey"/> for each member. The
-    /// stable <paramref name="groupKey"/> is shared out-of-band so every member
-    /// creates the same logical group; when omitted a fresh one is generated.
+    /// Creates a group (and its local conversation) with the given OTHER members.
+    /// The conversation's channel id is <c>SHA256(GroupKey)</c>. Pairwise member
+    /// sessions are created unestablished and established lazily on first message.
+    /// The stable <paramref name="groupKey"/> is shared out-of-band; when omitted
+    /// a fresh one is generated.
     /// </summary>
     public Group CreateGroup(string name, IReadOnlyList<Contact> members, string? groupKey = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(members);
 
+        var key = groupKey ?? NewGroupKey();
+
         var conversation = new Conversation
         {
             PeerId = null,
             IsGroup = true,
-            SessionKey = Array.Empty<byte>(),
-            RatchetState = Array.Empty<byte>(),
+            ChannelId = ChannelId.ForGroup(key),
         };
         _conversations.Insert(conversation);
 
         var group = new Group
         {
             Name = name,
-            GroupKey = groupKey ?? NewGroupKey(),
+            GroupKey = key,
             ConversationId = conversation.Id,
         };
         _groups.Insert(group);
@@ -116,7 +125,7 @@ public sealed class GroupChatService : IDisposable
 
     public IReadOnlyList<GroupMember> ListMembers(int groupId) => _members.ForGroup(groupId);
 
-    /// <summary>Adds a member and derives the pairwise session key with them.</summary>
+    /// <summary>Adds a member and creates an unestablished pairwise key placeholder.</summary>
     public GroupMember AddMember(int groupId, Contact contact)
     {
         ArgumentNullException.ThrowIfNull(contact);
@@ -131,21 +140,25 @@ public sealed class GroupChatService : IDisposable
         var member = new GroupMember { GroupId = groupId, ContactId = contact.Id };
         _members.Insert(member);
 
-        EstablishMemberKey(groupId, contact);
+        EnsureMemberKey(groupId, contact.Id);
         return member;
     }
 
     public void RemoveMember(int groupId, int contactId)
     {
+        // TODO(forward-secrecy): removing a member only deletes their local
+        // pairwise key. A departed member retains valid pairwise keys with the
+        // other members and can still decrypt future copies encrypted to them.
+        // Group key rotation on member leave is OUT OF SCOPE for this pass.
         _members.Remove(groupId, contactId);
         _memberKeys.DeleteForGroupAndContact(groupId, contactId);
     }
 
     /// <summary>
-    /// Returns (or derives) the pairwise session key + ratchet state shared with
-    /// <paramref name="contact"/> inside <paramref name="groupId"/>. Both sides
-    /// derive the identical key from their own DH private key and the peer's
-    /// public key.
+    /// Returns (or creates) the pairwise key placeholder shared with
+    /// <paramref name="contact"/> inside <paramref name="groupId"/>. The returned
+    /// key is <b>unestablished</b> (empty ratchet states) until the first send or
+    /// prekey receive; no session key is derived or persisted.
     /// </summary>
     public GroupMemberKey EstablishMemberKey(int groupId, Contact contact)
     {
@@ -155,13 +168,10 @@ public sealed class GroupChatService : IDisposable
         if (existing is not null)
             return existing;
 
-        var sessionKey = CryptoSession.EstablishSessionKey(_localIdentity.DhPrivateKey, contact.X25519Pub);
         var key = new GroupMemberKey
         {
             GroupId = groupId,
             MemberContactId = contact.Id,
-            SessionKey = (byte[])sessionKey.Clone(),
-            RatchetState = (byte[])sessionKey.Clone(),
         };
         _memberKeys.Insert(key);
         return key;
@@ -170,6 +180,28 @@ public sealed class GroupChatService : IDisposable
     public GroupMemberKey? GetMemberKey(int groupId, int contactId) =>
         _memberKeys.FindByGroupAndContact(groupId, contactId);
 
+    /// <summary>
+    /// True when every member's pairwise session is established (each member
+    /// holds an established <see cref="GroupMemberKey"/>). A group with no
+    /// members is not established. Mirrors <see cref="ChatService.IsEstablished"/>
+    /// so the UI can honestly switch from an "establishing session" state to
+    /// "connected" for a group.
+    /// </summary>
+    public bool IsEstablished(int groupId)
+    {
+        var members = _members.ForGroup(groupId);
+        if (members.Count == 0)
+            return false;
+
+        foreach (var member in members)
+        {
+            if (_memberKeys.FindByGroupAndContact(groupId, member.ContactId)?.IsEstablished != true)
+                return false;
+        }
+
+        return true;
+    }
+
     // ------------------------------------------------------------------
     // Sending
     // ------------------------------------------------------------------
@@ -177,34 +209,75 @@ public sealed class GroupChatService : IDisposable
     /// <summary>
     /// Encrypts <paramref name="text"/> separately to every member of
     /// <paramref name="groupId"/> (each under that member's own pairwise key),
-    /// stores the outgoing message + per-member ciphertexts, and sends a single
-    /// <see cref="GroupWireMessage"/> over the transport.
+    /// stores the outgoing message (plaintext) + per-member ciphertexts, and
+    /// sends a single <see cref="GroupWireMessage"/>. The wire sequence number is
+    /// the sender's per-sender sequence; unestablished members are established
+    /// with one shared one-time EK and the frame is marked prekey.
     /// </summary>
     public async Task<Message> SendGroupMessage(int groupId, string text)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         var group = _groups.Get(groupId) ?? throw new KeyNotFoundException($"Group {groupId} not found.");
         var conversationId = ConversationIdOf(group);
+        var conversation = _conversations.Get(conversationId)
+            ?? throw new InvalidOperationException($"Group {groupId} has no conversation.");
+        var channelId = conversation.ChannelId;
 
         var members = _members.ForGroup(groupId);
         if (members.Count == 0)
             throw new InvalidOperationException("The group has no members.");
 
-        var seq = _messages.MaxSeq(conversationId) + 1;
+        var senderSeq = _messages.MaxSenderSeq(conversationId, senderId: 0) + 1;
+        var localSeq = _messages.MaxSeq(conversationId) + 1;
+        var context = MessageContext.Build(channelId, senderSeq);
+        var plaintextBytes = Encoding.UTF8.GetBytes(text);
+
+        // Determine up-front whether any member's pairwise session is unestablished
+        // (=> this frame is a prekey message). One one-time EK is generated and
+        // reused across every member established by this broadcast.
+        var memberKeys = members.ToDictionary(m => m.ContactId, m => EnsureMemberKey(groupId, m.ContactId));
+        var isPrekey = memberKeys.Values.Any(k => !k.IsEstablished);
+        byte[]? ekPrivate = null;
+        byte[]? ekPublic = null;
+        if (isPrekey)
+        {
+            var kp = KeyGeneration.GenerateX25519KeyPair();
+            ekPrivate = kp.PrivateKey;
+            ekPublic = kp.PublicKey;
+        }
+
         var recipients = new List<GroupWireRecipient>();
 
         foreach (var member in members)
         {
-            var key = EnsureMemberKey(groupId, member.ContactId);
+            var key = memberKeys[member.ContactId];
+
+            if (!key.IsEstablished)
+            {
+                var contact = _contacts.Get(member.ContactId)
+                    ?? throw new KeyNotFoundException($"Contact {member.ContactId} not found.");
+                if (contact.X25519Pub.Length != IdentityKeyPair.X25519PublicKeyBytes)
+                    throw new InvalidOperationException($"Contact '{contact.Nickname}' has no X25519 identity key.");
+                if (contact.EphemeralX25519Pub.Length != IdentityKeyPair.X25519PublicKeyBytes)
+                    throw new InvalidOperationException($"Contact '{contact.Nickname}' has no signed prekey; the pairwise session cannot be established.");
+
+                var (send, recv) = CryptoSession.EstablishInitiatorSessionWithEk(
+                    _localIdentity, ekPrivate!, contact.X25519Pub, contact.EphemeralX25519Pub, CryptoSession.GroupInfo);
+                key.SendRatchetState = send;
+                key.RecvRatchetState = recv;
+                _memberKeys.Update(key);
+            }
+
             var session = new CryptoSession(
-                key.SessionKey,
-                key.RatchetState,
+                key.SendRatchetState,
+                key.RecvRatchetState,
                 _localIdentity.SigningPublicKey,
                 _localIdentity.SigningPrivateKey);
 
-            var envelope = session.Seal(Encoding.UTF8.GetBytes(text));
+            var envelope = session.Seal(plaintextBytes, context);
 
-            key.RatchetState = session.RatchetState;
+            // Commit the send ratchet at seal time (exactly one key consumed, once).
+            key.SendRatchetState = session.SendRatchetState;
             _memberKeys.Update(key);
 
             recipients.Add(new GroupWireRecipient
@@ -219,8 +292,12 @@ public sealed class GroupChatService : IDisposable
             _groupEnvelopes.Insert(new GroupMessageEnvelope
             {
                 ConversationId = conversationId,
-                Seq = seq,
+                Seq = localSeq,
+                SenderSeq = senderSeq,
                 SenderPublic = _localIdentity.SigningPublicKey,
+                IsPrekey = isPrekey,
+                SenderEkPublic = ekPublic ?? Array.Empty<byte>(),
+                SenderIkPublic = isPrekey ? _localIdentity.DhPublicKey : Array.Empty<byte>(),
                 RecipientContactId = member.ContactId,
                 Nonce = envelope.Nonce,
                 Ciphertext = envelope.Ciphertext,
@@ -229,25 +306,134 @@ public sealed class GroupChatService : IDisposable
             });
         }
 
-        _messages.Insert(new Message
+        // The one-time EK private key is never persisted; zero it now that every
+        // unestablished member has been established.
+        if (ekPrivate is not null)
+            CryptographicOperations.ZeroMemory(ekPrivate);
+
+        var message = new Message
         {
             ConversationId = conversationId,
-            Seq = seq,
+            Seq = localSeq,
+            SenderSeq = senderSeq,
             SenderId = 0, // 0 == self
+            Plaintext = text,
             Timestamp = DateTime.UtcNow,
-            Status = MessageStatus.Sent,
+            Status = MessageStatus.Pending,
+        };
+        _messages.Insert(message);
+
+        _pending.Insert(new PendingMessage
+        {
+            ConversationId = conversationId,
+            SenderSeq = senderSeq,
+            IsPrekey = isPrekey,
+            SenderEkPublic = ekPublic ?? Array.Empty<byte>(),
+            SenderIkPublic = isPrekey ? _localIdentity.DhPublicKey : Array.Empty<byte>(),
         });
 
         var wire = new GroupWireMessage
         {
             GroupKey = group.GroupKey,
-            Seq = seq,
+            Seq = senderSeq,
             SenderPublic = _localIdentity.SigningPublicKey,
             Recipients = recipients,
+            FrameType = isPrekey ? FrameType.Prekey : FrameType.Message,
+            SenderEkPublic = isPrekey ? ekPublic : null,
+            SenderIkPublic = isPrekey ? _localIdentity.DhPublicKey : null,
         };
-        await _transport.SendAsync(wire.Serialize());
 
-        return _messages.ForConversation(conversationId).Single(m => m.Seq == seq);
+        try
+        {
+            await _transport.SendAsync(wire.Serialize());
+        }
+        catch
+        {
+            message.Status = MessageStatus.Failed;
+            _messages.Update(message);
+            return message;
+        }
+
+        message.Status = MessageStatus.Delivered;
+        _messages.Update(message);
+        _pending.Delete(conversationId, senderSeq);
+        return message;
+    }
+
+    /// <summary>Returns outgoing group messages that are Pending or Failed.</summary>
+    public IReadOnlyList<Message> ListPending(int groupId)
+    {
+        var group = _groups.Get(groupId) ?? throw new KeyNotFoundException($"Group {groupId} not found.");
+        var conversationId = ConversationIdOf(group);
+        var result = new List<Message>();
+        foreach (var m in _messages.ForConversation(conversationId))
+        {
+            if (m.SenderId == 0 && m.Status is MessageStatus.Pending or MessageStatus.Failed)
+                result.Add(m);
+        }
+        result.Sort((a, b) => a.SenderSeq.CompareTo(b.SenderSeq));
+        return result;
+    }
+
+    /// <summary>
+    /// Re-sends the stored per-member ciphertexts of every pending/failed group
+    /// message (in sequence order) as the <b>identical</b> frame. No member's
+    /// send ratchet advances again (each key was consumed once at seal time).
+    /// Returns the number of messages delivered.
+    /// </summary>
+    public async Task<int> RetryPending(int groupId)
+    {
+        var group = _groups.Get(groupId) ?? throw new KeyNotFoundException($"Group {groupId} not found.");
+        var conversationId = ConversationIdOf(group);
+
+        var delivered = 0;
+        foreach (var message in ListPending(groupId))
+        {
+            var envelopes = _groupEnvelopes.ForSeq(conversationId, message.Seq);
+            if (envelopes.Count == 0)
+                continue;
+
+            var pending = _pending.Find(conversationId, message.SenderSeq);
+            var wire = new GroupWireMessage
+            {
+                GroupKey = group.GroupKey,
+                Seq = message.SenderSeq,
+                SenderPublic = _localIdentity.SigningPublicKey,
+                Recipients = envelopes.Select(e => new GroupWireRecipient
+                {
+                    RecipientContactId = e.RecipientContactId,
+                    Nonce = e.Nonce,
+                    Ciphertext = e.Ciphertext,
+                    Tag = e.Tag,
+                    Signature = e.Signature,
+                }).ToList(),
+            };
+
+            if (pending is not null && pending.IsPrekey)
+            {
+                wire.FrameType = FrameType.Prekey;
+                wire.SenderEkPublic = pending.SenderEkPublic;
+                wire.SenderIkPublic = pending.SenderIkPublic;
+            }
+
+            try
+            {
+                await _transport.SendAsync(wire.Serialize());
+            }
+            catch
+            {
+                message.Status = MessageStatus.Failed;
+                _messages.Update(message);
+                continue;
+            }
+
+            message.Status = MessageStatus.Delivered;
+            _messages.Update(message);
+            _pending.Delete(conversationId, message.SenderSeq);
+            delivered++;
+        }
+
+        return delivered;
     }
 
     // ------------------------------------------------------------------
@@ -256,9 +442,11 @@ public sealed class GroupChatService : IDisposable
 
     /// <summary>
     /// Invoked by <see cref="ITransport.MessageReceived"/>. Authenticates the
-    /// sender, decrypts ONLY this member's own copy, stores the message and all
-    /// per-member ciphertexts (for store-and-forward relay), and raises
-    /// <see cref="MessageDelivered"/>. Tampered or foreign copies are dropped.
+    /// sender, (on a prekey frame) establishes the pairwise session as the
+    /// responder, decrypts ONLY this member's own copy, stores the plaintext and
+    /// all per-member ciphertexts (for store-and-forward relay), and raises
+    /// <see cref="MessageDelivered"/>. Tampered, replayed, or foreign copies are
+    /// dropped.
     /// </summary>
     public void HandleIncomingGroupMessage(byte[] rawPayload)
     {
@@ -283,32 +471,55 @@ public sealed class GroupChatService : IDisposable
             return; // unknown sender
 
         var conversationId = ConversationIdOf(group);
+        var conversation = _conversations.Get(conversationId);
+        if (conversation is null)
+            return;
+        var channelId = conversation.ChannelId;
+
+        var senderSeq = wire.Seq;
+
+        // Durable duplicate check before any ratchet mutation.
+        if (_messages.ExistsBySenderSeq(conversationId, sender.Id, senderSeq))
+            return;
+
+        var recv = GetReceiveState(conversation, sender.Id);
+        if (senderSeq <= recv.LastDeliveredSeq || recv.Delivered.Contains(senderSeq))
+            return;
+
+        var context = MessageContext.Build(channelId, senderSeq);
         var candidates = wire.Recipients.Select(r => r.ToEnvelope(wire.SenderPublic)).ToList();
-        if (!TryDeliver(group, conversationId, wire.Seq, sender, candidates))
+        var plaintext = TryDeliver(
+            group, conversationId, senderSeq, sender, candidates, context, recv.SkippedKeys,
+            wire.IsPrekey, wire.SenderEkPublic, wire.SenderIkPublic);
+        if (plaintext is null)
             return; // no copy for us, or tampered
 
-        if (!_messages.Exists(conversationId, wire.Seq))
+        var localSeq = _messages.MaxSeq(conversationId) + 1;
+        _messages.Insert(new Message
         {
-            _messages.Insert(new Message
-            {
-                ConversationId = conversationId,
-                Seq = wire.Seq,
-                SenderId = sender.Id,
-                Timestamp = DateTime.UtcNow,
-                Status = MessageStatus.Received,
-            });
-        }
+            ConversationId = conversationId,
+            Seq = localSeq,
+            SenderSeq = senderSeq,
+            SenderId = sender.Id,
+            Plaintext = plaintext,
+            Timestamp = DateTime.UtcNow,
+            Status = MessageStatus.Received,
+        });
 
         foreach (var recipient in wire.Recipients)
         {
-            if (_groupEnvelopes.Exists(conversationId, wire.Seq, recipient.RecipientContactId))
+            if (_groupEnvelopes.Exists(conversationId, localSeq, recipient.RecipientContactId))
                 continue;
 
             _groupEnvelopes.Insert(new GroupMessageEnvelope
             {
                 ConversationId = conversationId,
-                Seq = wire.Seq,
+                Seq = localSeq,
+                SenderSeq = senderSeq,
                 SenderPublic = wire.SenderPublic,
+                IsPrekey = wire.IsPrekey,
+                SenderEkPublic = wire.SenderEkPublic ?? Array.Empty<byte>(),
+                SenderIkPublic = wire.SenderIkPublic ?? Array.Empty<byte>(),
                 RecipientContactId = recipient.RecipientContactId,
                 Nonce = recipient.Nonce,
                 Ciphertext = recipient.Ciphertext,
@@ -316,6 +527,16 @@ public sealed class GroupChatService : IDisposable
                 Signature = recipient.Signature,
             });
         }
+
+        PersistSkippedKeys(channelId, sender.Id, recv.SkippedKeys);
+        AdvanceContiguous(recv, senderSeq);
+
+        MessageDelivered?.Invoke(new IncomingMessage(
+            conversationId,
+            sender.Id,
+            senderSeq,
+            plaintext,
+            DateTime.UtcNow));
     }
 
     // ------------------------------------------------------------------
@@ -332,14 +553,18 @@ public sealed class GroupChatService : IDisposable
     /// <summary>
     /// Applies a catch-up payload for a group: stores the missed messages and
     /// per-member ciphertexts, then decrypts and delivers this member's own copy
-    /// of each newly-applied message (in sequence order). Returns the highest
-    /// sequence number that was newly applied (0 if nothing new).
+    /// of each newly-applied message (in sequence order), storing its plaintext.
+    /// Returns the highest local sequence number that was newly applied.
     /// </summary>
     public long ApplySyncPayload(int groupId, SyncPayload payload)
     {
         ArgumentNullException.ThrowIfNull(payload);
         var group = _groups.Get(groupId) ?? throw new KeyNotFoundException($"Group {groupId} not found.");
         var conversationId = ConversationIdOf(group);
+        var conversation = _conversations.Get(conversationId);
+        if (conversation is null)
+            return 0;
+        var channelId = conversation.ChannelId;
 
         var newSeqs = new List<long>();
         foreach (var src in payload.Messages)
@@ -351,7 +576,9 @@ public sealed class GroupChatService : IDisposable
             {
                 ConversationId = conversationId,
                 Seq = src.Seq,
+                SenderSeq = src.SenderSeq,
                 SenderId = src.SenderId,
+                Plaintext = "",
                 Timestamp = src.Timestamp,
                 Status = MessageStatus.Received,
             });
@@ -367,7 +594,11 @@ public sealed class GroupChatService : IDisposable
             {
                 ConversationId = conversationId,
                 Seq = e.Seq,
+                SenderSeq = e.SenderSeq,
                 SenderPublic = e.SenderPublic,
+                IsPrekey = e.IsPrekey,
+                SenderEkPublic = e.SenderEkPublic,
+                SenderIkPublic = e.SenderIkPublic,
                 RecipientContactId = e.RecipientContactId,
                 Nonce = e.Nonce,
                 Ciphertext = e.Ciphertext,
@@ -387,12 +618,37 @@ public sealed class GroupChatService : IDisposable
             if (sender is null)
                 continue;
 
+            var first = envelopes[0];
+            var senderSeq = first.SenderSeq;
             var candidates = envelopes
                 .Select(e => new MessageEnvelope(e.SenderPublic, e.Nonce, e.Ciphertext, e.Tag, e.Signature))
                 .ToList();
 
-            if (TryDeliver(group, conversationId, seq, sender, candidates))
-                maxApplied = Math.Max(maxApplied, seq);
+            var recv = GetReceiveState(conversation, sender.Id);
+            var context = MessageContext.Build(channelId, senderSeq);
+            var plaintext = TryDeliver(
+                group, conversationId, senderSeq, sender, candidates, context, recv.SkippedKeys,
+                first.IsPrekey, first.SenderEkPublic, first.SenderIkPublic);
+            if (plaintext is null)
+                continue;
+
+            var stored = _messages.ForConversation(conversationId).FirstOrDefault(m => m.Seq == seq);
+            if (stored is not null)
+            {
+                stored.Plaintext = plaintext;
+                _messages.Update(stored);
+            }
+
+            PersistSkippedKeys(channelId, sender.Id, recv.SkippedKeys);
+            AdvanceContiguous(recv, senderSeq);
+            maxApplied = Math.Max(maxApplied, seq);
+
+            MessageDelivered?.Invoke(new IncomingMessage(
+                conversationId,
+                sender.Id,
+                senderSeq,
+                plaintext,
+                DateTime.UtcNow));
         }
 
         return maxApplied;
@@ -424,57 +680,137 @@ public sealed class GroupChatService : IDisposable
         return EstablishMemberKey(groupId, contact);
     }
 
+    private ReceiveChainState GetReceiveState(Conversation conversation, int senderId)
+    {
+        if (!_receive.TryGetValue((conversation.Id, senderId), out var state))
+        {
+            state = new ReceiveChainState();
+            foreach (var skipped in _skippedKeys.ForChannelAndSender(conversation.ChannelId, senderId))
+                state.SkippedKeys[skipped.SenderSeq] = (byte[])skipped.Key.Clone();
+            _receive[(conversation.Id, senderId)] = state;
+        }
+        return state;
+    }
+
+    private void PersistSkippedKeys(byte[] channelId, int senderId, IDictionary<long, byte[]> skippedKeys)
+    {
+        _skippedKeys.DeleteForChannelAndSender(channelId, senderId);
+        foreach (var kv in skippedKeys)
+        {
+            _skippedKeys.Insert(new SkippedKey
+            {
+                ChannelId = (byte[])channelId.Clone(),
+                SenderId = senderId,
+                SenderSeq = kv.Key,
+                Key = (byte[])kv.Value.Clone(),
+            });
+        }
+    }
+
+    private static void AdvanceContiguous(ReceiveChainState state, long seq)
+    {
+        if (seq == state.LastDeliveredSeq + 1)
+        {
+            state.LastDeliveredSeq = seq;
+            while (state.Delivered.Remove(state.LastDeliveredSeq + 1))
+                state.LastDeliveredSeq++;
+        }
+        else
+        {
+            state.Delivered.Add(seq);
+        }
+    }
+
     /// <summary>
     /// Decrypts this member's own copy from <paramref name="candidates"/> using
-    /// the pairwise key shared with <paramref name="sender"/>, commits the
-    /// advanced ratchet state, updates sync state, and raises
-    /// <see cref="MessageDelivered"/>. Returns false when no candidate decrypts.
+    /// the pairwise receive chain shared with <paramref name="sender"/>, commits
+    /// the advanced receive state, and updates sync state. Returns the decrypted
+    /// plaintext, or <c>null</c> when no candidate decrypts. If the pairwise
+    /// session is unestablished, it is established (transiently) from the prekey
+    /// fields and only persisted once a candidate actually decrypts, so a foreign
+    /// prekey frame with no copy for us cannot poison the session.
     /// </summary>
-    private bool TryDeliver(
+    private string? TryDeliver(
         Group group,
         int conversationId,
-        long seq,
+        long senderSeq,
         Contact sender,
-        IReadOnlyList<MessageEnvelope> candidates)
+        IReadOnlyList<MessageEnvelope> candidates,
+        byte[] context,
+        Dictionary<long, byte[]> skippedKeys,
+        bool isPrekey,
+        byte[]? senderEkPublic,
+        byte[]? senderIkPublic)
     {
         var memberKey = _memberKeys.FindByGroupAndContact(group.Id, sender.Id);
-        if (memberKey is null)
-            return false; // we have no pairwise session with this sender in this group
+        var hasEstablished = memberKey is not null && memberKey.IsEstablished;
+
+        byte[] sendState;
+        byte[] recvState;
+        if (hasEstablished)
+        {
+            // Already established: decrypt normally. A wire-level IsPrekey only
+            // means *some* member needed a prekey; our own copy is sealed with our
+            // established session, so the prekey fields are ignored.
+            sendState = memberKey!.SendRatchetState;
+            recvState = memberKey.RecvRatchetState;
+        }
+        else
+        {
+            if (!isPrekey || senderEkPublic is null || senderIkPublic is null)
+                return null; // no session and not a prekey → cannot decrypt
+            if (!sender.X25519Pub.AsSpan().SequenceEqual(senderIkPublic))
+                return null; // identity-key mismatch
+
+            (sendState, recvState) = CryptoSession.EstablishResponderSession(
+                _localIdentity, senderIkPublic, senderEkPublic, CryptoSession.GroupInfo);
+        }
 
         foreach (var candidate in candidates)
         {
             var session = new CryptoSession(
-                memberKey.SessionKey,
-                memberKey.RatchetState,
+                sendState,
+                recvState,
                 _localIdentity.SigningPublicKey,
                 _localIdentity.SigningPrivateKey);
 
             byte[] plaintext;
             try
             {
-                plaintext = session.Open(candidate);
+                plaintext = session.Open(candidate, context, senderSeq, skippedKeys);
             }
             catch (CryptographicException)
             {
                 continue; // not our copy (or tampered): try the next candidate
             }
 
-            memberKey.RatchetState = session.RatchetState;
-            _memberKeys.Update(memberKey);
+            // A candidate decrypted: persist the (possibly newly-established)
+            // pairwise session and its advanced receive chain.
+            if (memberKey is null)
+            {
+                memberKey = new GroupMemberKey
+                {
+                    GroupId = group.Id,
+                    MemberContactId = sender.Id,
+                    SendRatchetState = sendState,
+                    RecvRatchetState = session.RecvRatchetState,
+                };
+                _memberKeys.Insert(memberKey);
+            }
+            else
+            {
+                memberKey.SendRatchetState = sendState;
+                memberKey.RecvRatchetState = session.RecvRatchetState;
+                _memberKeys.Update(memberKey);
+            }
 
             var lastSeq = _syncStates.Get(conversationId, sender.Id)?.LastSeq ?? 0;
-            _syncStates.Upsert(conversationId, sender.Id, Math.Max(lastSeq, seq));
+            _syncStates.Upsert(conversationId, sender.Id, Math.Max(lastSeq, senderSeq));
 
-            MessageDelivered?.Invoke(new IncomingMessage(
-                conversationId,
-                sender.Id,
-                seq,
-                Encoding.UTF8.GetString(plaintext),
-                DateTime.UtcNow));
-            return true;
+            return Encoding.UTF8.GetString(plaintext);
         }
 
-        return false;
+        return null;
     }
 
     public void Dispose()
@@ -484,5 +820,12 @@ public sealed class GroupChatService : IDisposable
             _started = false;
             _transport.MessageReceived -= HandleIncomingGroupMessage;
         }
+    }
+
+    private sealed class ReceiveChainState
+    {
+        public long LastDeliveredSeq;
+        public HashSet<long> Delivered { get; } = new();
+        public Dictionary<long, byte[]> SkippedKeys { get; } = new();
     }
 }

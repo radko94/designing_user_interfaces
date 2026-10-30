@@ -14,7 +14,7 @@
                 Margin="0,0,0,8">
             <HorizontalStackLayout Spacing="8">
                 <Label Text="Състояние:" FontSize="13" TextColor="{AppThemeBinding Light=#333A45, Dark=#C7CDD8}" />
-                <Label x:Name="ConnectionLabel" Text="Изключено" FontSize="13" FontAttributes="Bold" TextColor="#B45309" />
+                <Label x:Name="ConnectionLabel" Text="Няма връзка" FontSize="13" FontAttributes="Bold" TextColor="#B45309" />
             </HorizontalStackLayout>
         </Border>
 
@@ -39,7 +39,15 @@
                             MaximumWidthRequest="300">
                         <VerticalStackLayout Spacing="2">
                             <Label Text="{Binding Text}" FontSize="15" TextColor="{Binding TextColor}" LineBreakMode="WordWrap" />
-                            <Label Text="{Binding Time}" FontSize="10" TextColor="{Binding TextColor}" Opacity="0.7" HorizontalOptions="End" />
+                            <HorizontalStackLayout Spacing="6" HorizontalOptions="End">
+                                <Label Text="{Binding Status}"
+                                       FontSize="10"
+                                       TextColor="{Binding StatusColor}"
+                                       Opacity="0.85"
+                                       VerticalOptions="Center"
+                                       IsVisible="{Binding HasStatus}" />
+                                <Label Text="{Binding Time}" FontSize="10" TextColor="{Binding TextColor}" Opacity="0.7" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
                         </VerticalStackLayout>
                     </Border>
                 </DataTemplate>

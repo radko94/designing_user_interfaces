@@ -46,6 +46,8 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">17.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+		<!-- Pin the Android compile/target SDK so the build stops floating (resolves to API 36). -->
+		<TargetPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">36.0</TargetPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
@@ -79,6 +81,11 @@
 		     (1.19.0.1); otherwise core 1.19 and core-ktx 1.16 both ship the merged
 		     Kotlin classes and D8 fails with "defined multiple times". -->
 		<PackageReference Include="Xamarin.AndroidX.Core.Core.Ktx" Version="1.19.0.1" />
+		<!-- SQLite3 Multiple Ciphers (SQLite3MC): free (MIT) encryption provider,
+		     built against SQLitePCLRaw 3.x. Replaces the frozen/deprecated
+		     SQLitePCLRaw.bundle_e_sqlcipher 2.1.11, whose provider was built against
+		     SQLitePCLRaw.core 2.1.11 and is incompatible with core 3.0.3. -->
+		<PackageReference Include="SQLite3MC.PCLRaw.bundle" Version="2.6.1" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -89,6 +89,8 @@ public sealed class MessageRepository
         return message.Id;
     }
 
+    public void Update(Message message) => _db.Update(message);
+
     public List<Message> ForConversation(int conversationId)
     {
         var list = new List<Message>();
@@ -124,11 +126,32 @@ public sealed class MessageRepository
         return max;
     }
 
+    public long MaxSenderSeq(int conversationId, int senderId)
+    {
+        long max = 0;
+        foreach (var m in _db.Table<Message>())
+        {
+            if (m.ConversationId == conversationId && m.SenderId == senderId && m.SenderSeq > max)
+                max = m.SenderSeq;
+        }
+        return max;
+    }
+
     public bool Exists(int conversationId, long seq)
     {
         foreach (var m in _db.Table<Message>())
         {
             if (m.ConversationId == conversationId && m.Seq == seq)
+                return true;
+        }
+        return false;
+    }
+
+    public bool ExistsBySenderSeq(int conversationId, int senderId, long senderSeq)
+    {
+        foreach (var m in _db.Table<Message>())
+        {
+            if (m.ConversationId == conversationId && m.SenderId == senderId && m.SenderSeq == senderSeq)
                 return true;
         }
         return false;

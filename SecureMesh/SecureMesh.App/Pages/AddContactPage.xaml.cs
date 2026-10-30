@@ -68,8 +68,10 @@ public partial class AddContactPage : ContentPage
         // Safety number: order-independent so both peers see the same value.
         var fingerprint = Fingerprint.Compute(_identity.Identity.SigningPublicKey, payload.SigningPublicKey);
 
+        // Step 1 — add confirmation. The contact is only persisted after the
+        // user explicitly accepts; it is created unverified (TOFU).
         var confirmed = await DisplayAlertAsync(
-            "Потвърдете контакта",
+            "Добавяне на контакт",
             $"Искате да добавите „{payload.Nickname}“?\n\nНомер за сигурност:\n{fingerprint}",
             "Добави",
             "Отказ");
@@ -80,11 +82,25 @@ public partial class AddContactPage : ContentPage
             return;
         }
 
-        _contacts.AddContact(payload.Nickname, payload.SigningPublicKey, payload.DhPublicKey);
+        var contact = _contacts.AddContact(
+            payload.Nickname, payload.SigningPublicKey, payload.DhPublicKey, payload.EphemeralPublicKey);
+
+        // Step 2 — out-of-band safety-number comparison. Only a matching
+        // comparison marks the contact "Проверен"; "Не" keeps it unverified.
+        var matches = await DisplayAlertAsync(
+            "Сравнихте ли номера за сигурност?",
+            $"Сравнете този номер с показания от {payload.Nickname}:\n\n{fingerprint}",
+            "Да, съвпадат",
+            "Не");
+
+        if (matches)
+            _contacts.VerifyContact(contact.Id);
 
         await DisplayAlertAsync(
             "Добавен",
-            "Контактът е добавен. Сравнете номера за сигурност при среща, за да потвърдите самоличността.",
+            matches
+                ? $"Контактът „{payload.Nickname}“ е добавен и потвърден."
+                : $"Контактът „{payload.Nickname}“ е добавен като непроверен. Сравнете номера за сигурност при среща, за да потвърдите самоличността.",
             "Добре");
 
         await Shell.Current.GoToAsync("..");

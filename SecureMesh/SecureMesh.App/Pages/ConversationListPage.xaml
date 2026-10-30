@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SecureMesh.App.Pages.ConversationListPage"
+             Title="Разговори"
+             BackgroundColor="{AppThemeBinding Light=#F4F6FA, Dark=#12141A}">
+
+    <Grid Padding="16,12">
+
+        <CollectionView x:Name="ConversationsView"
+                        SelectionMode="Single"
+                        SelectionChanged="OnConversationSelected">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Spacing="8" VerticalOptions="Center">
+                    <Label Text="Няма разговори"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+                    <Label Text="Започнете разговор от списъка с контакти."
+                           FontSize="14"
+                           HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Margin="0,4"
+                            BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1B1F27}"
+                            StrokeThickness="1"
+                            Stroke="{AppThemeBinding Light=#E2E6EE, Dark=#2A2F3A}"
+                            StrokeShape="RoundRectangle 12"
+                            Padding="14,12">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="2">
+                            <Label Text="{Binding Name}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   LineBreakMode="TailTruncation"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#1F2430, Dark=#E7EAF0}" />
+                            <Label Grid.Row="0" Grid.Column="1"
+                                   Text="{Binding Time}"
+                                   FontSize="12"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#8A93A3, Dark=#9AA1AC}" />
+                            <Label Grid.Row="1" Grid.Column="0"
+                                   Text="{Binding Preview}"
+                                   FontSize="13"
+                                   MaxLines="1"
+                                   LineBreakMode="TailTruncation"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+                            <Border Grid.Row="1" Grid.Column="1"
+                                    BackgroundColor="#1B6EF3"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 9"
+                                    Padding="8,1"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    MinimumWidthRequest="20"
+                                    IsVisible="{Binding HasUnread}">
+                                <Label Text="{Binding UnreadCount}"
+                                       FontSize="11"
+                                       TextColor="White"
+                                       HorizontalOptions="Center"
+                                       HorizontalTextAlignment="Center" />
+                            </Border>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

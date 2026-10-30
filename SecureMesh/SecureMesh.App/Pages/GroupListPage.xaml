@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SecureMesh.App.Pages.GroupListPage"
+             Title="Групи"
+             BackgroundColor="{AppThemeBinding Light=#F4F6FA, Dark=#12141A}">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="＋" Clicked="OnAddGroupClicked" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="*,Auto" Padding="16,12">
+
+        <CollectionView x:Name="GroupsView"
+                        Grid.Row="0"
+                        SelectionMode="Single"
+                        SelectionChanged="OnGroupSelected">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Spacing="8" VerticalOptions="Center">
+                    <Label Text="Няма групи"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+                    <Label Text="Докоснете „＋“, за да създадете групов разговор."
+                           FontSize="14"
+                           HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Margin="0,4"
+                            BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1B1F27}"
+                            StrokeThickness="1"
+                            Stroke="{AppThemeBinding Light=#E2E6EE, Dark=#2A2F3A}"
+                            StrokeShape="RoundRectangle 12"
+                            Padding="14,12"
+                            MinimumHeightRequest="48">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Name}"
+                                       FontSize="16"
+                                       TextColor="{AppThemeBinding Light=#1F2430, Dark=#E7EAF0}" />
+                                <Label Text="{Binding MemberCountLabel}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light=#6B7280, Dark=#9AA1AC}" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1"
+                                   Text="›"
+                                   FontSize="20"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#9AA1AC, Dark=#6B7280}" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button Grid.Row="1"
+                Text="Нова група"
+                Clicked="OnAddGroupClicked"
+                FontSize="16"
+                BackgroundColor="#1B6EF3"
+                TextColor="White"
+                CornerRadius="12"
+                HeightRequest="52"
+                Margin="0,8,0,0" />
+    </Grid>
+</ContentPage>

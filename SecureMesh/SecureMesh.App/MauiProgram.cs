@@ -29,13 +29,20 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
+		// Encryption provider (SQLite3 Multiple Ciphers) must be installed before
+		// the first database is opened.
+		Database.ConfigureProvider(new SQLitePCL.SQLite3Provider_sqlite3mc());
+
 		// Identity (seed/persist on startup via App / IdentityService).
 		builder.Services.AddSingleton<IdentityService>();
 		builder.Services.AddSingleton<IdentityKeyPair>(sp => sp.GetRequiredService<IdentityService>().Identity);
 
-		// Persistence.
+		// Persistence. The DB is encrypted with a random 32-byte DEK (base64)
+		// held in SecureStorage (Android Keystore); see GetOrCreateDatabasePassword.
 		builder.Services.AddSingleton<Database>(_ =>
-			new Database(Path.Combine(Microsoft.Maui.Storage.FileSystem.AppDataDirectory, "securemesh.db3")));
+			new Database(
+				Path.Combine(Microsoft.Maui.Storage.FileSystem.AppDataDirectory, "securemesh.db3"),
+				GetOrCreateDatabasePassword()));
 		builder.Services.AddSingleton<ContactRepository>(sp => new ContactRepository(sp.GetRequiredService<Database>().Connection));
 		builder.Services.AddSingleton<ConversationRepository>(sp => new ConversationRepository(sp.GetRequiredService<Database>().Connection));
 		builder.Services.AddSingleton<MessageRepository>(sp => new MessageRepository(sp.GetRequiredService<Database>().Connection));
@@ -59,6 +66,10 @@ public static class MauiProgram
 			sp.GetRequiredService<IdentityKeyPair>(),
 			sp.GetRequiredService<ITransport>(),
 			sp.GetRequiredService<Database>()));
+		builder.Services.AddSingleton<GroupChatService>(sp => new GroupChatService(
+			sp.GetRequiredService<IdentityKeyPair>(),
+			sp.GetRequiredService<ITransport>(),
+			sp.GetRequiredService<Database>()));
 
 		// Pages (transient; resolved on navigation).
 		builder.Services.AddTransient<IdentityPage>();
@@ -66,7 +77,28 @@ public static class MauiProgram
 		builder.Services.AddTransient<AddContactPage>();
 		builder.Services.AddTransient<ChatPage>();
 		builder.Services.AddTransient<SettingsPage>();
+		builder.Services.AddTransient<ConversationListPage>();
+		builder.Services.AddTransient<GroupListPage>();
+		builder.Services.AddTransient<NewGroupPage>();
+		builder.Services.AddTransient<GroupChatPage>();
 
 		return builder.Build();
+	}
+
+	/// <summary>
+	/// Returns the SQLCipher database key, generating and persisting a random
+	/// 32-byte DEK (base64) in SecureStorage on first use. Never hardcoded.
+	/// </summary>
+	private static string GetOrCreateDatabasePassword()
+	{
+		var existing = KeyVault.GetSecret(KeyVault.DbPassword);
+		if (!string.IsNullOrEmpty(existing))
+			return existing;
+
+		var dek = new byte[32];
+		System.Security.Cryptography.RandomNumberGenerator.Fill(dek);
+		var password = Convert.ToBase64String(dek);
+		KeyVault.SetSecret(KeyVault.DbPassword, password);
+		return password;
 	}
 }

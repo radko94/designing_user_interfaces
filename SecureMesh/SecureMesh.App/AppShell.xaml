@@ -8,13 +8,18 @@
     FlyoutBehavior="Disabled">
 
     <ShellContent
-        Title="Идентичност"
-        Route="identity"
-        ContentTemplate="{DataTemplate pages:IdentityPage}" />
+        Title="Чатове"
+        Route="chats"
+        ContentTemplate="{DataTemplate pages:ConversationListPage}" />
 
     <ShellContent
         Title="Контакти"
         Route="contacts"
         ContentTemplate="{DataTemplate pages:ContactsPage}" />
+
+    <ShellContent
+        Title="Групи"
+        Route="groups"
+        ContentTemplate="{DataTemplate pages:GroupListPage}" />
 
 </Shell>

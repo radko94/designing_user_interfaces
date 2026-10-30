@@ -1480,7 +1480,7 @@
     ]
   },
   "packageFolders": {
-    "/home/rapostolov/.nuget/packages/": {}
+    "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/.nuget/packages": {}
   },
   "project": {
     "version": "1.0.0",
@@ -1488,7 +1488,7 @@
       "projectUniqueName": "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/SecureMesh.Core.Tests/SecureMesh.Core.Tests.csproj",
       "projectName": "SecureMesh.Core.Tests",
       "projectPath": "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/SecureMesh.Core.Tests/SecureMesh.Core.Tests.csproj",
-      "packagesPath": "/home/rapostolov/.nuget/packages/",
+      "packagesPath": "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/.nuget/packages",
       "outputPath": "/home/rapostolov/Desktop/programing/designing_ui/SecureMesh/SecureMesh.Core.Tests/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
