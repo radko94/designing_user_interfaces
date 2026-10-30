@@ -6,7 +6,7 @@ SecureMesh is an **offline-first, peer-to-peer messenger for Android** built wit
 
 It is inspired by **Bridgefy** and **Briar**, but its differentiator is **real, vetted cryptography** — Bridgefy's own encryption was broken twice; SecureMesh uses standard, proven primitives.
 
-**Current status (MVP):** 1:1 text chat is implemented and the core is fully unit/integration-tested. Group chat is modeled but not yet wired (see Limitations). Voice/video are intentionally out of scope.
+**Current status:** 1:1 and group text chat are both implemented; the core is fully unit/integration-tested and the app builds and runs on the Android emulator. Voice/video are intentionally out of scope.
 
 ## Technology stack
 
@@ -37,7 +37,7 @@ dotnet build SecureMesh.App/SecureMesh.App.csproj -f net10.0-android -c Debug
 dotnet test SecureMesh.Core.Tests/SecureMesh.Core.Tests.csproj
 ```
 
-The test suite (72 tests) covers key generation, X25519 agreement, AES-GCM tamper detection, Ed25519 signatures, the ratchet, message envelopes, forward-secrecy reliability, group-chat domain logic, and the full end-to-end encrypted message flow over mock transports.
+The test suite (74 tests) covers key generation, X25519 agreement, AES-GCM tamper detection, Ed25519 signatures, the ratchet, message envelopes, forward-secrecy reliability, group-chat domain logic, chat history, and the full end-to-end encrypted message flow over mock transports.
 
 ## How to use (two phones)
 
@@ -48,11 +48,11 @@ The test suite (72 tests) covers key generation, X25519 agreement, AES-GCM tampe
 
 ## Known limitations
 
-- **1:1 chat only** (MVP). Group chat is being wired: the domain model, repositories, and pairwise group session keying exist and are unit-tested, but the transport and UI are not finished.
+- **Group chat end-to-end over BLE is unverified.** Creating/listing groups, adding members, and sending/receiving group messages are implemented (the domain logic is unit-tested and the group UI is wired), but — like 1:1 chat — real group messaging over Bluetooth still needs two physical devices to exercise.
 - **Session forward secrecy requires peers to be connected to establish a session.** The per-session root key is derived from a prekey handshake that needs both devices online and paired; offline/asynchronous prekey delivery is not implemented yet.
 - **BLE runtime is unverified** — the app compiles and the logic is unit-tested, but real advertising/connection/messaging has not been exercised on two physical devices (pending physical hardware).
 - **Range** is Bluetooth's: ~10–100 m. There is no relay through phones that don't run the app (physically impossible), and no cross-city delivery without the internet.
-- Chat history is stored encrypted at rest; the current UI shows session bubbles only (no re-decrypt-history view yet).
+- Chat history is stored inside the encrypted-at-rest database and is re-loaded when a conversation reopens.
 - No voice/video (out of scope by decision).
 
 ## Source attribution
