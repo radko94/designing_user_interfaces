@@ -58,9 +58,4 @@ Install an APK only if one has actually been produced and signed; no APK is ship
 - Input is limited to 32-bit integers.
 - Execution on Windows 11 has not yet been independently verified (pending).
 
-## Source attribution
-
-- Lecturer's course book (GitBook): https://dimitar-minchev.gitbook.io/developing-cross-platform-apps/
-- Original "Suma 1.0" exercise (Chapter 1, UWP): https://raw.githubusercontent.com/dimitarminchev/DCPA/Bulgarian/chapter1/110_Suma_1.0.md
-- Course examples repository (DCPA): https://github.com/dimitarminchev/DCPA
-- .NET MAUI documentation: https://learn.microsoft.com/dotnet/maui/
+![img.png](./Resources/Images/img.png)

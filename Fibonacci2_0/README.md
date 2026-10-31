@@ -97,8 +97,4 @@ file if it differs.
 - Windows 11 execution has not yet been independently
   validated.
 
-## Reference
-
-Original Fibonacci 2.0 exercise (Chapter 2, Xamarin.Forms):
-
-https://raw.githubusercontent.com/dimitarminchev/DCPA/Bulgarian/chapter2/205_Fibonacci_2.0.md
+![alt text](./Resources/Images/image.png)

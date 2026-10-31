@@ -63,9 +63,4 @@ The result field (`A+B=`) is read-only; the user can only type into the A and B 
 - The result field is read-only (a documented departure from the original editable `Entry`).
 - Execution on Windows 11 has not yet been independently verified (pending).
 
-## Source attribution
-
-- Lecturer's course book (GitBook): https://dimitar-minchev.gitbook.io/developing-cross-platform-apps/
-- Original "Suma 4.0" exercise (Chapter 4, MAUI): https://raw.githubusercontent.com/dimitarminchev/DCPA/Bulgarian/chapter4/405_Suma_4.0.md
-- Course examples repository (DCPA): https://github.com/dimitarminchev/DCPA
-- .NET MAUI documentation: https://learn.microsoft.com/dotnet/maui/
+![alt text](./Resources/Images/image.png)

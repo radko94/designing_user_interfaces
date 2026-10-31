@@ -86,8 +86,4 @@ file if it differs.
 - Windows 11 execution has not yet been independently
   validated.
 
-## Reference
-
-Original Fibonacci 1.0 exercise:
-
-https://dimitar-minchev.gitbook.io/developing-cross-platform-apps/101_intorduction/109_applications/111_fibonacci_1.0
+![alt text](./Resources/Images/image.png)

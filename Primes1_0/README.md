@@ -91,3 +91,4 @@ CLI commands from the project directory:
 - The input limit is restricted to 1,000,000.
 - Windows 11 execution has not yet been validated.
 
+![img.png](Resources/Images/img.png)
