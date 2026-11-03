@@ -101,3 +101,7 @@ Adapted from the CS431 Chapter 2 (Xamarin.Forms)
 exercise "Primes 2.0":
 
 - https://raw.githubusercontent.com/dimitarminchev/DCPA/Bulgarian/chapter2/206_Primes_2.0.md
+
+
+![alt text](Resources/Images/image.png)
+![alt text](Resources/Images/image1.png)

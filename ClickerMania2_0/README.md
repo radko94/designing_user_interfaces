@@ -57,9 +57,5 @@ dotnet build -f net10.0-android -c Debug
 - No time limit or stop/reset control is implemented; the timer runs indefinitely while the page is shown (consistent with the original example).
 - Execution on Windows 11 has not yet been independently verified (pending).
 
-## Source attribution
-
-- Lecturer's course book (GitBook): https://dimitar-minchev.gitbook.io/developing-cross-platform-apps/
-- Original "Clicker Mania 2.0" exercise (Chapter 2, Xamarin.Forms): https://raw.githubusercontent.com/dimitarminchev/DCPA/Bulgarian/chapter2/208_Clicker_Mania_2.0.md
-- Course examples repository (DCPA): https://github.com/dimitarminchev/DCPA
-- .NET MAUI documentation: https://learn.microsoft.com/dotnet/maui/
+![alt text](Resources/Images/image.png)
+![alt text](Resources/Images/image-1.png)

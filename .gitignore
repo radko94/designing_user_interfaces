@@ -2,4 +2,5 @@ AGENTS.md
 docs
 .nuget
 buildcheck.log
-**/.idea
+**/**/.idea
+**/**/obj

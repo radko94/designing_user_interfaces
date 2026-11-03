@@ -13,7 +13,25 @@
     <configurations />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0b8785aa-2262-4335-94ae-79984666e83f" name="Changes" comment="" />
+    <list default="true" id="0b8785aa-2262-4335-94ae-79984666e83f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../ClickerMania1_1/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../ClickerMania1_1/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ClickerMania1_2/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../ClickerMania1_2/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.ClickerMania2_0.dir/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.ClickerMania2_0.dir/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../HtmlDownloader1_0/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../HtmlDownloader1_0/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../HtmlDownloader2_0/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../HtmlDownloader2_0/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../JsonReader1_0/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../JsonReader1_0/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../JsonReader2_0/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../JsonReader2_0/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Phonebook1_0/.idea/.idea.Phonebook1_0.dir/.idea/AndroidProjectSystem.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Phonebook2_0/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Phonebook2_0/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Primes2_0/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Primes2_0/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../RssReader1_0/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../RssReader1_0/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../RssReader2_0/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../RssReader2_0/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SecureMesh/SecureMesh.Core.Tests/obj/Debug/net10.0/SecureMesh.Core.Tests.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../SecureMesh/SecureMesh.Core.Tests/obj/Debug/net10.0/SecureMesh.Core.Tests.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SecureMesh/SecureMesh.Core.Tests/obj/Debug/net10.0/SecureMesh.Core.Tests.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../SecureMesh/SecureMesh.Core.Tests/obj/Debug/net10.0/SecureMesh.Core.Tests.AssemblyInfoInputs.cache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SecureMesh/SecureMesh.Core/obj/Debug/net10.0/SecureMesh.Core.AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/../SecureMesh/SecureMesh.Core/obj/Debug/net10.0/SecureMesh.Core.AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SecureMesh/SecureMesh.Core/obj/Debug/net10.0/SecureMesh.Core.AssemblyInfoInputs.cache" beforeDir="false" afterPath="$PROJECT_DIR$/../SecureMesh/SecureMesh.Core/obj/Debug/net10.0/SecureMesh.Core.AssemblyInfoInputs.cache" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -31,10 +49,10 @@
     <commands />
     <urls />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 0,
-  "fromUser": false
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0,
+  &quot;fromUser&quot;: false
+}</component>
   <component name="ProjectId" id="3LBr1HcCOg0DIVkNZ8Vkm6Oyj4S" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -55,7 +73,7 @@
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "git-widget-placeholder": "master",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/rapostolov/Desktop/programing/designing_ui/Fibonacci2_0/Fibonacci2_0.csproj",
+    "last_opened_file_path": "/home/rapostolov/Desktop/programing/designing_ui/HtmlDownloader1_0/HtmlDownloader1_0.csproj",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",

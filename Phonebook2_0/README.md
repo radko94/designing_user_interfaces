@@ -129,3 +129,7 @@ https://images.unsplash.com/photo-1740252117012-bb53ad05e370
 
 - Original Chapter 2 exercise (Xamarin.Forms), "Phone Book 2.0":
   https://raw.githubusercontent.com/dimitarminchev/DCPA/Bulgarian/chapter2/207_Phone_Book_2.0.md
+
+![alt text](Resources/Images/image.png)
+![alt text](Resources/Images/image-1.png)
+![alt text](Resources/Images/image-2.png)
