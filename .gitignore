@@ -1,6 +1,26 @@
+# IDE (JetBrains Rider)
+.idea/
+**/.idea/
+
+# Build output (all projects)
+obj/
+bin/
+**/obj/
+**/bin/
+
+# Scratch project
+.refdump/
+
+# Logs and archives
+*.log
+*.zip
+*.7z
+
+# Reference PDF (not source code)
+*.pdf
+
+# Existing ignores
 AGENTS.md
 docs
 .nuget
 buildcheck.log
-**/**/.idea
-**/**/obj
