@@ -56,3 +56,5 @@ Install an APK only if one has actually been produced and signed; no APK is ship
 - Android is the only intended target; there is no native Windows executable.
 - Only HTTPS and HTTP URLs are accepted. Cleartext `http://` may be blocked by Android 9+ (API 28) network policy depending on the target configuration.
 - Execution on Windows 11 has not yet been independently verified (pending).
+
+![alt text](Resources/Images/image.png)

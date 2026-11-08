@@ -58,3 +58,5 @@ dotnet build -f net10.0-android -c Debug
 - Requires an active internet connection to fetch jokes.
 - Speech depends on the device having a TTS engine and voice installed.
 - Execution on Windows 11 has not yet been independently verified (pending).
+
+![alt text](Resources/Images/image.png)

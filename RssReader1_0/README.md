@@ -59,3 +59,7 @@ Note: the default feed `https://www.minchev.eu/feed/` is the lecturer's example;
 - Parses RSS 2.0 `<item>` feeds; Atom feeds are not handled.
 - Only HTTP/HTTPS URLs are accepted. Cleartext `http://` may be blocked by Android 9+ (API 28) network policy depending on target configuration.
 - Execution on Windows 11 has not yet been independently verified (pending).
+
+![alt text](Resources/Images/image.png)
+![alt text](Resources/Images/image_1.png)
+![alt text](Resources/Images/image_2.png)

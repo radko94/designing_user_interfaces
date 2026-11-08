@@ -124,3 +124,8 @@ When no picture URL is supplied, the application uses a default image loaded fro
 The default contact image is provided through Unsplash:
 
 https://images.unsplash.com/photo-1740252117012-bb53ad05e370
+
+![alt text](Resources/Images/image.png)
+![alt text](Resources/Images/image_1.png)
+![alt text](Resources/Images/image_2.png)
+![alt text](Resources/Images/image_3.png)
